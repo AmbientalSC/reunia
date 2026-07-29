@@ -31,7 +31,7 @@ const LiveSummary: React.FC<LiveSummaryProps> = ({ insights, segmentCount, isVis
   if (!hasContent) return null;
 
   // Tópicos já aparecem como tags; não os repete nos pontos principais.
-  const keyPoints = insights.suggestions?.slice(0, 3) || [];
+  const keyPoints = insights.suggestions?.slice(-5) || [];
 
   // Build connections: contradictions + unresolved points
   const connections = [
@@ -64,7 +64,7 @@ const LiveSummary: React.FC<LiveSummaryProps> = ({ insights, segmentCount, isVis
         <div className="summary-section">
           <div className="summary-label">Pontos principais</div>
           <ul className="summary-bullets">
-            {keyPoints.slice(0, 4).map((point: string, i: number) => (
+            {keyPoints.map((point: string, i: number) => (
               <li key={i}>{point}</li>
             ))}
           </ul>
@@ -79,13 +79,13 @@ const LiveSummary: React.FC<LiveSummaryProps> = ({ insights, segmentCount, isVis
             <span className="summary-count">{insights.actionItems.length}</span>
           </div>
           <ul className="summary-bullets actions">
-            {insights.actionItems.slice(0, 3).map((item: string, i: number) => (
+            {insights.actionItems.slice(-5).map((item: string, i: number) => (
               <li key={i}>
                 <span className="action-checkbox">☐</span> {item}
               </li>
             ))}
-            {insights.actionItems.length > 3 && (
-              <li className="summary-more">+{insights.actionItems.length - 3} mais...</li>
+            {insights.actionItems.length > 5 && (
+              <li className="summary-more">+{insights.actionItems.length - 5} anteriores...</li>
             )}
           </ul>
         </div>
@@ -96,7 +96,7 @@ const LiveSummary: React.FC<LiveSummaryProps> = ({ insights, segmentCount, isVis
         <div className="summary-section connections">
           <div className="summary-label">Pendências e conexões</div>
           <ul className="summary-bullets">
-            {connections.slice(0, 2).map((conn: string, i: number) => (
+            {connections.slice(-4).map((conn: string, i: number) => (
               <li key={i}>{conn}</li>
             ))}
           </ul>

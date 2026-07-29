@@ -82,6 +82,8 @@ export class AudioService {
     this.micBuffer = [];
     this.systemBuffer = [];
     this.latestInsights = undefined;
+    this.whisperService.resetTranscript();
+    this.insightService.reset();
 
     console.log('[AudioService] Recording started');
 
@@ -92,6 +94,7 @@ export class AudioService {
     this.startInsightLoop();
 
     // Notify renderers
+    this.broadcastInsights(this.emptyInsights());
     this.broadcastStateChange('recording');
   }
 
@@ -203,7 +206,9 @@ export class AudioService {
 
       if (transcriptSegments.length > 0) {
         const fullTranscript = transcriptSegments.map((segment) => segment.text).join(' ');
-        finalInsights = await this.insightService.generateFinalSummary(fullTranscript);
+        finalInsights = this.limitInsights(
+          await this.insightService.generateFinalSummary(fullTranscript)
+        );
       }
 
       const finalized: MeetingData = {
@@ -266,6 +271,41 @@ export class AudioService {
     this.safeSendAll('insights:update', insights);
   }
 
+  private emptyInsights(): InsightsData {
+    return {
+      actionItems: [],
+      contradictions: [],
+      unresolvedPoints: [],
+      suggestions: [],
+      topics: [],
+      timestamp: Date.now(),
+    };
+  }
+
+  private limitInsights(incoming: InsightsData): InsightsData {
+    return {
+      ...incoming,
+      actionItems: this.normalizeInsightList(incoming.actionItems, 8),
+      contradictions: this.normalizeInsightList(incoming.contradictions, 5),
+      unresolvedPoints: this.normalizeInsightList(incoming.unresolvedPoints, 6),
+      suggestions: this.normalizeInsightList(incoming.suggestions, 6),
+      topics: this.normalizeInsightList(incoming.topics, 6),
+      timestamp: incoming.timestamp,
+    };
+  }
+
+  private normalizeInsightList(values: string[], limit: number): string[] {
+    const unique = new Map<string, string>();
+
+    for (const value of values) {
+      const cleaned = typeof value === 'string' ? value.trim() : '';
+      if (!cleaned) continue;
+      unique.set(cleaned.toLocaleLowerCase('pt-BR'), cleaned);
+    }
+
+    return [...unique.values()].slice(-limit);
+  }
+
   private startInsightLoop(): void {
     if (this.insightInterval) return;
 
@@ -276,10 +316,15 @@ export class AudioService {
         lastSegmentCount = this.segments.length;
         try {
           const transcript = this.segments.map(s => `${s.text}`).join(' ');
-          const insights = await this.insightService.analyzeTranscript(transcript);
+          const insights = await this.insightService.analyzeTranscript(
+            transcript,
+            this.latestInsights
+          );
           if (insights) {
-            this.latestInsights = insights;
-            this.broadcastInsights(insights);
+            // A resposta já representa o estado completo reconciliado.
+            // Substituir permite remover itens resolvidos e consolidar equivalentes.
+            this.latestInsights = this.limitInsights(insights);
+            this.broadcastInsights(this.latestInsights);
           }
         } catch (err) {
           // Silent fail — insights are best-effort

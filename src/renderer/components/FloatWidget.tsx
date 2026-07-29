@@ -24,7 +24,6 @@ const FloatWidget: React.FC = () => {
   const [meetingState, setMeetingState] = useState<MeetingState>('idle');
   const [showPanel, setShowPanel] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
   const [audioBars, setAudioBars] = useState<number[]>([0.05, 0.05, 0.05, 0.05, 0.05]);
   const [captureError, setCaptureError] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
@@ -434,8 +433,6 @@ const FloatWidget: React.FC = () => {
         <div
           className="float-widget"
           style={{ WebkitAppRegion: 'drag' } as any}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
         >
         {/* Status indicator */}
         <div className="widget-status">
@@ -475,9 +472,8 @@ const FloatWidget: React.FC = () => {
           </div>
         )}
 
-        {/* Control buttons — visible on hover or when idle */}
-        {(isHovered || meetingState === 'idle') && (
-          <div className="widget-controls" style={{ WebkitAppRegion: 'no-drag' } as any}>
+        {/* Controles permanecem montados para não sumirem durante o movimento do cursor. */}
+        <div className="widget-controls" style={{ WebkitAppRegion: 'no-drag' } as any}>
             {meetingState === 'idle' && (
               <button className="ctrl-btn start" onClick={handleStart} title="Iniciar Reunião">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -513,8 +509,7 @@ const FloatWidget: React.FC = () => {
                 </button>
               </>
             )}
-          </div>
-        )}
+        </div>
 
         {/* Transcription snippet */}
         {latestSegment && meetingState !== 'idle' && (

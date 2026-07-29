@@ -1,6 +1,5 @@
 import { getGroqClient, withRetry, resetGroqClient } from './groqClient';
 import { getConfigStore } from '../store/configStore';
-import { BrowserWindow } from 'electron';
 
 /**
  * WhisperService handles audio transcription via Groq's Whisper API.
@@ -49,18 +48,6 @@ export class WhisperService {
 
       if (text) {
         this.currentTranscript += (this.currentTranscript ? ' ' : '') + text;
-
-        // Send transcription to renderers
-        BrowserWindow.getAllWindows().forEach((win) => {
-          if (!win.isDestroyed()) {
-            win.webContents.send('transcription:new-segment', {
-              speaker,
-              text,
-              timestamp: Date.now(),
-              isFinal: true,
-            });
-          }
-        });
       }
 
       return text;
