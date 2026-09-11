@@ -1,0 +1,27 @@
+{
+  "name": "Notas de Reunião Padrão",
+  "description": "Um modelo padrão para reuniões gerais, focado em resultados-chave e ações.",
+  "sections": [
+    {
+      "title": "Resumo",
+      "instruction": "Forneça um resumo executivo breve, de um parágrafo, de toda a reunião.",
+      "format": "paragraph"
+    },
+    {
+      "title": "Decisões-Chave",
+      "instruction": "Liste as decisões mais importantes tomadas durante a reunião.",
+      "format": "list"
+    },
+    {
+      "title": "Itens de Ação",
+      "instruction": "Liste todas as tarefas atribuídas com seus responsáveis e prazo. Sempre adicione a referência do segmento de transcrição e o timestamp na tabela.",
+      "format": "list",
+      "item_format": "| **Responsável** | Tarefa | Prazo | Segmento de Transcrição de Referência | Timestamp do Segmento |\n| --- | --- | --- | --- | --- |"
+    },
+    {
+      "title": "Destaques da Discussão",
+      "instruction": "Resuma os principais tópicos da discussão, argumentos-chave e insights importantes.",
+      "format": "paragraph"
+    }
+  ]
+}

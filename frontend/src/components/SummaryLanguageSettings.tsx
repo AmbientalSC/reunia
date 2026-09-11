@@ -1,0 +1,111 @@
+'use client';
+
+import { useState } from 'react';
+import { Globe, Pin } from 'lucide-react';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { LanguagePickerPopover } from '@/components/LanguagePickerPopover';
+import { useRecentLanguages } from '@/hooks/useRecentLanguages';
+import { labelForCode } from '@/lib/summary-languages';
+import { useConfig } from '@/contexts/ConfigContext';
+import { LANGUAGES } from '@/constants/languages';
+
+export function SummaryLanguageSettings() {
+  const { recents, pinned, addRecent, removeRecent, setPinned } = useRecentLanguages();
+  const { setSelectedLanguage } = useConfig();
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const togglePin = (code: string) => {
+    const newPinned = pinned === code ? null : code;
+    setPinned(newPinned);
+
+    // Ao fixar um idioma como padrão do resumo, ele também vira o idioma
+    // padrão da reunião (transcrição), quando suportado.
+    if (newPinned && LANGUAGES.some((l) => l.code === newPinned)) {
+      setSelectedLanguage(newPinned);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm relative">
+      <div className="flex items-center gap-2 mb-2">
+        <Globe size={18} className="text-gray-500" />
+        <h3 className="text-lg font-semibold text-gray-900">Idioma do Resumo</h3>
+      </div>
+      <p className="text-sm text-gray-600 mb-4">
+        Fixe um idioma como padrão para novas reuniões. Idiomas não fixados permanecem como
+        opções de troca rápida no gerador de resumos. Auto usa o idioma dominante da transcrição.
+      </p>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {recents.map((code) => {
+          const isPinned = pinned === code;
+          return (
+            <span
+              key={code}
+              className={`inline-flex items-center rounded-full border text-sm overflow-hidden ${
+                isPinned
+                  ? 'bg-blue-50 border-blue-200 text-blue-800'
+                  : 'bg-gray-100 border-gray-200 text-gray-800'
+              }`}
+            >
+              <button
+                type="button"
+                aria-label={isPinned ? `Desafixar ${labelForCode(code)} como padrão` : `Fixar ${labelForCode(code)} como padrão`}
+                aria-pressed={isPinned}
+                title={isPinned ? 'Clique para remover como padrão' : 'Clique para definir como padrão'}
+                onClick={() => togglePin(code)}
+                className={`flex items-center gap-1.5 pl-3 pr-2 py-1 hover:brightness-95 active:brightness-90 ${
+                  isPinned ? 'text-blue-800' : 'text-gray-800'
+                }`}
+              >
+                <Pin
+                  size={14}
+                  className={isPinned ? 'text-blue-600' : 'text-gray-400'}
+                  fill={isPinned ? 'currentColor' : 'none'}
+                />
+                {labelForCode(code)}
+              </button>
+              <button
+                type="button"
+                aria-label={`Remover ${labelForCode(code)}`}
+                onClick={() => removeRecent(code)}
+                className={`pr-2.5 pl-0.5 py-1 leading-none ${isPinned ? 'text-blue-400 hover:text-blue-700' : 'text-gray-400 hover:text-gray-700'}`}
+              >
+                ×
+              </button>
+            </span>
+          );
+        })}
+
+        <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              disabled={recents.length >= 5}
+              className="inline-flex items-center gap-1 rounded-full border border-dashed border-gray-300 px-3 py-1 text-sm text-gray-600 hover:border-gray-400 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              ＋ Adicionar idioma
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-auto p-0 border-0 shadow-none bg-transparent">
+            <LanguagePickerPopover
+              mode="settings"
+              value={null}
+              onChange={(code) => {
+                if (code) addRecent(code);
+                setPickerOpen(false);
+              }}
+              onClose={() => setPickerOpen(false)}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      <p className="text-xs text-gray-400 mt-3">
+        {pinned
+          ? `Padrão: ${labelForCode(pinned)} - clique novamente para remover. Máximo de 5 opções de troca rápida.`
+          : 'Clique em qualquer idioma para defini-lo como padrão. Máximo de 5 opções de troca rápida.'}
+      </p>
+    </div>
+  );
+}

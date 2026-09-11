@@ -1,0 +1,39 @@
+{
+  "name": "Daily Standup",
+  "description": "Atualizações diárias com tempo limitado para equipes de engenharia/produto.",
+  "sections": [
+    {
+      "title": "Data",
+      "instruction": "AAAA-MM-DD",
+      "format": "string"
+    },
+    {
+      "title": "Participantes",
+      "instruction": "Lista de participantes presentes",
+      "format": "list"
+    },
+    {
+      "title": "Ontem",
+      "instruction": "O que foi concluído ontem (tópicos curtos)",
+      "format": "list",
+      "example_item_format": "| **Responsável** | **Trabalho Concluído** |\n| --- | --- |"
+    },
+    {
+      "title": "Hoje",
+      "instruction": "Trabalho planejado para hoje (tópicos curtos)",
+      "format": "list",
+      "example_item_format": "| **Responsável** | **Trabalho Planejado** |\n| --- | --- |"
+    },
+    {
+      "title": "Impedimentos",
+      "instruction": "Quaisquer impedimentos e responsável, se conhecido",
+      "format": "list",
+      "item_format": "| **Responsável** | **Impedimento** | Impacto |\n| --- | --- | --- |"
+    },
+    {
+      "title": "Notas",
+      "instruction": "Notas rápidas ou avisos opcionais",
+      "format": "paragraph"
+    }
+  ]
+}

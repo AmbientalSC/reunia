@@ -1,0 +1,45 @@
+{
+  "name": "Retrospectiva (Ágil)",
+  "description": "Modelo de retrospectiva de sprint para melhoria contínua.",
+  "sections": [
+    {
+      "title": "Sprint",
+      "instruction": "Nome/número do sprint e intervalo de datas",
+      "format": "string"
+    },
+    {
+      "title": "Participação",
+      "instruction": "Lista de participantes",
+      "format": "list"
+    },
+    {
+      "title": "Começar a Fazer",
+      "instruction": "Ações ou experimentos para começar no próximo sprint",
+      "format": "list",
+      "item_format": "| **Ideia** | **Proponente** |\n| --- | --- |"
+    },
+    {
+      "title": "Parar de Fazer",
+      "instruction": "Práticas para parar",
+      "format": "list",
+      "item_format": "| **Prática** | **Motivo** |\n| --- | --- |"
+    },
+    {
+      "title": "Continuar Fazendo",
+      "instruction": "Práticas para continuar",
+      "format": "list",
+      "item_format": "| **Prática** | **Notas** |\n| --- | --- |"
+    },
+    {
+      "title": "Itens de Ação",
+      "instruction": "Experimentos concretos com responsáveis e métricas de sucesso",
+      "format": "list",
+      "item_format": "| **Responsável** | **Tarefa** | **Prazo** | **Métrica de Sucesso** |\n| --- | --- | --- | --- |"
+    },
+    {
+      "title": "Notas e Votos",
+      "instruction": "Resumo e itens mais votados",
+      "format": "paragraph"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "name": "Sincronização do Projeto / Atualização de Status",
+  "description": "Reunião semanal ou quinzenal de status do projeto, focada em marcos e riscos.",
+  "sections": [
+    {
+      "title": "Data e Hora da Reunião",
+      "instruction": "Data, horário de início/término, nome do facilitador",
+      "format": "string"
+    },
+    {
+      "title": "Participantes",
+      "instruction": "Liste os participantes e suas funções",
+      "format": "list"
+    },
+    {
+      "title": "Marcos e Status",
+      "instruction": "Marcos atuais com status e data estimada de conclusão",
+      "format": "list",
+      "item_format": "| **Marco** | **Status** | **Previsão** |\n| --- | --- | --- |"
+    },
+    {
+      "title": "Resumo do Progresso",
+      "instruction": "Parágrafo curto resumindo o progresso desde a última reunião de sincronização",
+      "format": "paragraph"
+    },
+    {
+      "title": "Principais Riscos e Mitigações",
+      "instruction": "Liste os principais riscos com nível de impacto, plano de mitigação e responsável",
+      "format": "list",
+      "item_format": "| **Risco** | **Impacto** | **Mitigação** | **Responsável** |\n| --- | --- | --- | --- |"
+    },
+    {
+      "title": "Decisões-Chave",
+      "instruction": "Decisões tomadas nesta reunião com justificativa e timestamp",
+      "format": "list",
+      "item_format": "| **Decisão** | **Justificativa** | **Timestamp** |\n| --- | --- | --- |"
+    },
+    {
+      "title": "Itens de Ação",
+      "instruction": "Tarefas com responsáveis, prazos, prioridade e status",
+      "format": "list",
+      "item_format": "| **Responsável** | **Tarefa** | **Prazo** | **Prioridade** | **Status** |\n| --- | --- | --- | --- | --- |"
+    },
+    {
+      "title": "Documentos Relacionados",
+      "instruction": "Links para documentos, tickets ou designs relevantes discutidos",
+      "format": "list",
+      "item_format": "| **Título do Documento** | **URL** | **Tipo** |\n| --- | --- | --- |"
+    }
+  ]
+}

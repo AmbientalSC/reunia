@@ -1,0 +1,44 @@
+{
+  "name": "Reunião com Cliente / Vendas",
+  "description": "Capture as metas do cliente, entregáveis e próximos passos.",
+  "sections": [
+    {
+      "title": "Metadados da Reunião",
+      "instruction": "Data, horário, local/modalidade, gerente de conta",
+      "format": "string"
+    },
+    {
+      "title": "Participantes",
+      "instruction": "Participantes do cliente e do fornecedor com funções",
+      "format": "list"
+    },
+    {
+      "title": "Metas do Cliente e Critérios de Sucesso",
+      "instruction": "O que o cliente deseja alcançar e como o sucesso será medido",
+      "format": "paragraph"
+    },
+    {
+      "title": "Entregáveis Acordados",
+      "instruction": "Entregáveis, responsáveis e prazos",
+      "format": "list",
+      "item_format": "| **Entregável** | **Responsável** | **Prazo** |\n| --- | --- | --- |"
+    },
+    {
+      "title": "Termos Comerciais Discutidos",
+      "instruction": "Preços, SLAs, condições de pagamento ou itens contratuais discutidos",
+      "format": "paragraph"
+    },
+    {
+      "title": "Riscos e Preocupações",
+      "instruction": "Preocupações do cliente, bloqueadores ou itens de escalonamento",
+      "format": "list",
+      "item_format": "| **Preocupação** | **Impacto** | **Responsável** |\n| --- | --- | --- |"
+    },
+    {
+      "title": "Próximos Passos",
+      "instruction": "Ações, responsáveis e prazos",
+      "format": "list",
+      "item_format": "| **Responsável** | **Ação** | **Prazo** |\n| --- | --- | --- |"
+    }
+  ]
+}

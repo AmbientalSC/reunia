@@ -1,0 +1,64 @@
+{
+  "name": "Nota de Sessão Psiquiátrica (SOAP + Híbrido com IA)",
+  "description": "Modelo de nota de evolução psiquiátrica assistida por IA baseado em SOAP, com metadados clínicos e resumo de IA.",
+  "sections": [
+    {
+      "title": "Metadados da Sessão",
+      "instruction": "Iniciais/ID do paciente, data da sessão, profissional, tipo de sessão, duração (sensível a HIPAA)",
+      "format": "string"
+    },
+    {
+      "title": "Resumo da Sessão por IA",
+      "instruction": "Resumo de uma linha e resumo executivo de um parágrafo (gerado por IA). Inclua a pontuação de confiança.",
+      "format": "paragraph"
+    },
+    {
+      "title": "Subjetivo (S)",
+      "instruction": "Humor, sintomas, sono, apetite e estressores autorrelatados pelo paciente",
+      "format": "paragraph"
+    },
+    {
+      "title": "Objetivo (O)",
+      "instruction": "Achados observáveis: afeto, fala, comportamento, orientação, sinais vitais se relevantes",
+      "format": "paragraph"
+    },
+    {
+      "title": "Avaliação (A)",
+      "instruction": "Impressão diagnóstica, avaliação de risco (SI/HI), progresso em relação às metas de tratamento",
+      "format": "paragraph"
+    },
+    {
+      "title": "Plano (P)",
+      "instruction": "Intervenções, mudanças de medicação, encaminhamentos, tarefas de terapia e acompanhamento",
+      "format": "list",
+      "item_format": "| **Intervenção** | **Responsável** | **Frequência** | **Data de Acompanhamento** |\n| --- | --- | --- | --- |"
+    },
+    {
+      "title": "Medicamentos",
+      "instruction": "Medicamentos atuais, doses, mudanças e justificativa",
+      "format": "list",
+      "item_format": "| **Medicamento** | **Dose** | **Via** | **Data de Início/Alteração** |\n| --- | --- | --- | --- |"
+    },
+    {
+      "title": "Diagnósticos (DSM/CID)",
+      "instruction": "Liste os códigos diagnósticos e o diagnóstico de trabalho",
+      "format": "list",
+      "item_format": "| **Código** | **Sistema** | **Diagnóstico** |\n| --- | --- | --- |"
+    },
+    {
+      "title": "Segurança e Gerenciamento de Riscos",
+      "instruction": "Plano de segurança, contatos de emergência, considerações de hospitalização",
+      "format": "paragraph"
+    },
+    {
+      "title": "Próxima Consulta",
+      "instruction": "Data, horário e modalidade da próxima sessão",
+      "format": "string"
+    },
+    {
+      "title": "Trilha de Auditoria",
+      "instruction": "Sinalizador de revisão humana, nome e timestamp do revisor, versão da IA",
+      "format": "paragraph"
+    }
+  ]
+}
