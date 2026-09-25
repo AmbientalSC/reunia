@@ -1,10 +1,10 @@
 [package]
-name = "meetily"
+name = "reunia"
 version = "0.4.0"
-description = "A Tauri App for meeting minutes"
-authors = ["Sujith S"]
+description = "ReunIA - Assistente de reuniões com IA da Ambiental"
+authors = ["Ambiental Limpeza Urbana e Saneamento"]
 license = "MIT"
-repository = "https://github.com/Zackriya-Solutions/meeting-minutes"
+repository = "https://github.com/AmbientalSC/reunia"
 edition = "2021"
 rust-version = "1.77"
 
@@ -134,6 +134,8 @@ ndarray = "0.16"
 bytes = { version = "1.9.0", features = ["serde"] }
 
 esaxx-rs = "0.1.10"
+sha2 = "0.10"          # PKCE code_challenge / OIDC nonce hashing for Microsoft SSO login
+base64 = "0.22"        # URL-safe encoding for PKCE/nonce values
 symphonia = { version = "0.5.4", features = ["aac", "isomp4", "mp3", "flac", "ogg", "vorbis", "pcm", "wav", "opt-simd"] }
 rand = "0.8.5"
 rayon = "1.10"
