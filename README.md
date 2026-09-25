@@ -7,9 +7,6 @@
     <p>
     Assistente de reuniões com IA, local-first, mantido pela Ambiental Limpeza Urbana e Saneamento.
     </p>
-    <a href="https://github.com/AmbientalSC/reunia/releases/latest"><img src="https://img.shields.io/badge/License-MIT-blue" alt="License"></a>
-    <a href="https://github.com/AmbientalSC/reunia/releases/latest"><img src="https://img.shields.io/badge/Supported_OS-macOS,_Windows-white" alt="Supported OS"></a>
-    <a href="https://github.com/AmbientalSC/reunia/releases/latest"><img alt="GitHub release" src="https://img.shields.io/github/v/release/AmbientalSC/reunia?include_prereleases&color=green"></a>
 </div>
 
 ---
