@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 
 // Default models used by every Groq-managed profile — the API key itself
 // comes from the Firestore profile (mirrored into the Rust AuthSession),
-// never entered by the user. See docs on user_profiles/{uid}.groqApiKey.
+// never entered by the user. See docs on user_profiles/{email}.groqApiKey.
 const GROQ_TRANSCRIPT_MODEL = 'whisper-large-v3-turbo';
 const GROQ_SUMMARY_MODEL = 'openai/gpt-oss-120b';
 

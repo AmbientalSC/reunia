@@ -70,12 +70,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         // Custom-token sign-in (see functions/src/index.ts) doesn't register
         // an official Firebase user email — the domain we validated lives in
-        // the ID token's custom claims, not `firebaseUser.email`.
+        // the ID token's custom claims, not `firebaseUser.email`. Normalized
+        // once here: also doubles as the Firestore user_profiles doc id.
         const tokenResult = await firebaseUser.getIdTokenResult();
-        const email =
-          (tokenResult.claims.email as string | undefined) ?? firebaseUser.email ?? undefined;
+        const email = (
+          (tokenResult.claims.email as string | undefined) ??
+          firebaseUser.email ??
+          ''
+        ).toLowerCase();
 
-        if (!email?.toLowerCase().endsWith(ALLOWED_EMAIL_DOMAIN)) {
+        if (!email || !email.endsWith(ALLOWED_EMAIL_DOMAIN)) {
           console.error('[AuthContext] Rejecting login outside', ALLOWED_EMAIL_DOMAIN);
           setAuthError('Use uma conta corporativa @ambiental.sc para entrar.');
           await firebaseSignOut(auth);
@@ -85,8 +89,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Login with Microsoft only proves the user belongs to the Ambiental
         // tenant — it does NOT mean they're allowed to use the app. Access
         // (and the per-user Groq key) requires a profile pre-registered by
-        // an admin in Firestore.
-        const profile = await fetchUserProfile(firebaseUser.uid);
+        // an admin in Firestore, keyed by email (see userProfile.ts).
+        const profile = await fetchUserProfile(email);
         if (!profile || !profile.authorized) {
           console.error('[AuthContext] No authorized profile for uid', firebaseUser.uid);
           setAuthError(NOT_REGISTERED_MESSAGE);
