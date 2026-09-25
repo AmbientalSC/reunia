@@ -238,8 +238,22 @@ jobs:
           Write-Host "Contents of vulkan-runtime directory:"
           Get-ChildItem $runtimeDir -ErrorAction SilentlyContinue
 
-      - name: Setup DigiCert Environment
+      - name: Check DigiCert secrets configured
+        id: digicert-check
         if: contains(inputs.platform, 'windows') && inputs.sign-binaries
+        shell: bash
+        env:
+          SM_API_KEY: ${{ secrets.SM_API_KEY }}
+        run: |
+          if [[ -n "$SM_API_KEY" ]]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::DigiCert code-signing secrets not configured — Windows installer will be built unsigned (SmartScreen will show 'Unknown publisher')."
+          fi
+
+      - name: Setup DigiCert Environment
+        if: contains(inputs.platform, 'windows') && inputs.sign-binaries && steps.digicert-check.outputs.configured == 'true'
         shell: pwsh
         run: |
           # Set environment variables
@@ -282,11 +296,11 @@ jobs:
           "SM_CLIENT_CERT_FILE=D:\Certificate_pkcs12.p12" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Setup DigiCert KeyLocker
-        if: contains(inputs.platform, 'windows') && inputs.sign-binaries
+        if: contains(inputs.platform, 'windows') && inputs.sign-binaries && steps.digicert-check.outputs.configured == 'true'
         uses: digicert/ssm-code-signing@v1.1.1
 
       - name: Sync Certificate to Windows Certificate Store
-        if: contains(inputs.platform, 'windows') && inputs.sign-binaries
+        if: contains(inputs.platform, 'windows') && inputs.sign-binaries && steps.digicert-check.outputs.configured == 'true'
         shell: pwsh
         run: |
           Write-Host "============================================================"
@@ -366,7 +380,7 @@ jobs:
           Write-Host ""
 
       - name: Verify DigiCert Setup
-        if: contains(inputs.platform, 'windows') && inputs.sign-binaries
+        if: contains(inputs.platform, 'windows') && inputs.sign-binaries && steps.digicert-check.outputs.configured == 'true'
         shell: pwsh
         run: |
           Write-Host "=== DigiCert Setup Verification ==="
