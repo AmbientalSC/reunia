@@ -48,67 +48,6 @@ O ReunIA é um assistente de reuniões com IA que roda inteiramente na máquina 
 1. Baixe o instalador mais recente (`.exe`) em [Releases](https://github.com/AmbientalSC/reunia/releases/latest)
 2. Execute o instalador
 
-### 🎯 Transcrição Local
-
-Transcreva reuniões inteiramente no seu dispositivo usando os modelos **Whisper** ou **Parakeet**. Nenhuma nuvem envolvida.
-
-<p align="center">
-    <img src="docs/home.png" width="650" style="border-radius: 10px;" alt="Tela principal do ReunIA" />
-</p>
-
-### 📥 Importar e Aprimorar `Beta`
-
-Importe arquivos de áudio existentes para gerar transcrições, ou re-transcreva qualquer reunião gravada com outro modelo ou idioma — tudo processado localmente.
-
-<p align="center">
-    <img src="docs/meetily-export.gif" width="650" style="border-radius: 10px;" alt="Importar e aprimorar" />
-</p>
-
-### 🤖 Resumos com IA
-
-Gere resumos de reunião com o provedor de IA de sua escolha. **Ollama** (local) é o recomendado, com suporte a Claude, Groq, OpenRouter e OpenAI.
-
-<p align="center">
-    <img src="docs/summary.png" width="650" style="border-radius: 10px;" alt="Geração de resumo" />
-</p>
-
-<p align="center">
-    <img src="docs/editor1.png" width="650" style="border-radius: 10px;" alt="Editor de resumo" />
-</p>
-
-### 🔒 Privacidade por Design
-
-Todos os dados ficam na sua máquina. Modelos de transcrição, gravações e transcrições são armazenados localmente.
-
-<p align="center">
-    <img src="docs/settings.png" width="650" style="border-radius: 10px;" alt="Configurações e armazenamento local" />
-</p>
-
-### 🌐 Endpoint OpenAI Personalizado
-
-Use seu próprio endpoint compatível com OpenAI para os resumos com IA. Ideal para infraestrutura de IA própria ou provedores preferidos.
-
-<p align="center">
-    <img src="docs/custom.png" width="650" style="border-radius: 10px;" alt="Configuração de endpoint OpenAI personalizado" />
-</p>
-
-### 🎙️ Mixagem Profissional de Áudio
-
-Capture microfone e áudio do sistema simultaneamente, com ducking inteligente e prevenção de clipping.
-
-<p align="center">
-    <img src="docs/audio.png" width="650" style="border-radius: 10px;" alt="Seleção de dispositivos de áudio" />
-</p>
-
-### ⚡ Aceleração por GPU
-
-Suporte nativo a aceleração de hardware em todas as plataformas:
-
-- **macOS**: Apple Silicon (Metal) + CoreML
-- **Windows**: NVIDIA (CUDA), AMD/Intel (Vulkan)
-
-Habilitado automaticamente no momento do build — sem configuração manual.
-
 ## Arquitetura
 
 O ReunIA é uma aplicação única e autocontida, construída com [Tauri](https://tauri.app/). Usa um backend em Rust para toda a lógica principal e um frontend em Next.js para a interface.
