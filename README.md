@@ -33,16 +33,8 @@
 
 O ReunIA é um assistente de reuniões com IA que roda inteiramente na máquina de quem usa. Ele grava, transcreve em tempo real e gera resumos das reuniões, sem enviar dados para a nuvem — a solução certa para quem precisa manter controle total sobre informações sensíveis da Ambiental.
 
-## Por que o ReunIA?
-
-- **Privacidade em primeiro lugar:** todo o processamento acontece localmente, no seu computador.
-- **Custo controlado:** usa modelos de IA open-source em vez de APIs pagas por uso.
-- **Flexível:** funciona offline e com múltiplos provedores de IA.
-- **Login corporativo:** entrada via SSO Microsoft, restrita a contas `@ambiental.sc` e a perfis pré-cadastrados por um administrador.
-
 ## Funcionalidades
 
-- **Local first:** todo o processamento roda na sua máquina — nenhum dado sai do computador sem você decidir.
 - **Transcrição em tempo real:** acompanhe a transcrição da reunião enquanto ela acontece.
 - **Resumos com IA:** gere resumos automáticos usando modelos de linguagem.
 - **Multiplataforma:** funciona em macOS e Windows.
@@ -55,28 +47,6 @@ O ReunIA é um assistente de reuniões com IA que roda inteiramente na máquina 
 
 1. Baixe o instalador mais recente (`.exe`) em [Releases](https://github.com/AmbientalSC/reunia/releases/latest)
 2. Execute o instalador
-
-### 🍎 **macOS**
-
-1. Baixe o `.dmg` mais recente em [Releases](https://github.com/AmbientalSC/reunia/releases/latest)
-2. Abra o arquivo `.dmg` baixado
-3. Arraste o **ReunIA** para a pasta Applications
-4. Abra o **ReunIA** a partir da pasta Applications
-
-### Build a partir do código-fonte
-
-Para desenvolvimento ou plataformas sem instalador pronto, veja o [guia de build](docs/BUILDING.md).
-
-**Início rápido:**
-
-```bash
-git clone https://github.com/AmbientalSC/reunia
-cd reunia/frontend
-pnpm install
-./build-gpu.sh
-```
-
-## Funcionalidades em Ação
 
 ### 🎯 Transcrição Local
 
