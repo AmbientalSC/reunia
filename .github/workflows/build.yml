@@ -451,8 +451,21 @@ jobs:
         if: ${{ inputs.target != '' && !contains(inputs.target, 'unknown-linux-gnu') && !contains(inputs.target, 'pc-windows-msvc') }}
         run: rustup target add ${{ inputs.target }}
 
-      - name: Import Apple Developer Certificate
+      - name: Check Apple signing secrets configured
+        id: apple-check
         if: contains(inputs.platform, 'macos') && inputs.sign-binaries
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+        run: |
+          if [[ -n "$APPLE_CERTIFICATE" ]]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Apple code-signing secrets not configured — macOS app will be ad-hoc signed only (tauri.conf.json signingIdentity: \"-\"), Gatekeeper will show an 'unidentified developer' warning."
+          fi
+
+      - name: Import Apple Developer Certificate
+        if: contains(inputs.platform, 'macos') && inputs.sign-binaries && steps.apple-check.outputs.configured == 'true'
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -468,7 +481,7 @@ jobs:
           security find-identity -v -p codesigning build.keychain
 
       - name: Verify certificate
-        if: contains(inputs.platform, 'macos') && inputs.sign-binaries
+        if: contains(inputs.platform, 'macos') && inputs.sign-binaries && steps.apple-check.outputs.configured == 'true'
         run: |
           CERT_INFO=$(security find-identity -v -p codesigning build.keychain | grep "Developer ID Application")
           CERT_ID=$(echo "$CERT_INFO" | awk -F'"' '{print $2}')
