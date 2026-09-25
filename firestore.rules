@@ -1,0 +1,17 @@
+rules_version = '2';
+
+// Aplicar manualmente em: Firebase Console > Firestore Database > Rules
+// (não há Firebase CLI configurado neste projeto para deploy automatizado).
+//
+// user_profiles/{uid}: cadastro de quem pode usar o ReunIA e a chave do
+// Groq de cada um. Só o próprio usuário lê o próprio perfil (necessário no
+// login); ninguém escreve pelo cliente — cadastro é feito manualmente pelo
+// admin direto no Firebase Console.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /user_profiles/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+  }
+}

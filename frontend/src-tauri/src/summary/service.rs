@@ -9,6 +9,7 @@ use crate::summary::processor::{
 };
 use crate::summary::templates::{self, Template};
 use crate::ollama::metadata::ModelMetadataCache;
+use crate::state::AppState;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::collections::HashMap;
@@ -346,10 +347,23 @@ impl SummaryService {
             }
         };
 
+        // Per-user Groq key from the logged-in session (admin-managed Firestore
+        // profile) takes priority over whatever is saved locally for Groq.
+        let groq_session_key = if provider == LLMProvider::Groq {
+            _app.try_state::<AppState>()
+                .and_then(|state| state.require_auth().ok())
+                .and_then(|session| session.groq_api_key)
+                .filter(|key| !key.trim().is_empty())
+        } else {
+            None
+        };
+
         // Validate and setup api_key, Flexible for Ollama, BuiltInAI, and CustomOpenAI
         let api_key = if provider == LLMProvider::Ollama || provider == LLMProvider::BuiltInAI || provider == LLMProvider::CustomOpenAI {
             // These providers don't require API keys from the standard database column
             String::new()
+        } else if let Some(key) = groq_session_key {
+            key
         } else {
             match SettingsRepository::get_api_key(&pool, &model_provider).await {
                 Ok(Some(key)) if !key.is_empty() => key,

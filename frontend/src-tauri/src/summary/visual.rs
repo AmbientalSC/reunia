@@ -53,6 +53,7 @@ pub async fn resolve_visual_llm_config(
     model_provider: &str,
     model_name: &str,
     app_data_dir: Option<PathBuf>,
+    groq_session_key: Option<String>,
 ) -> Result<VisualLlmConfig, String> {
     let provider = LLMProvider::from_str(model_provider)?;
 
@@ -61,6 +62,10 @@ pub async fn resolve_visual_llm_config(
         || provider == LLMProvider::CustomOpenAI
     {
         String::new()
+    } else if provider == LLMProvider::Groq && groq_session_key.is_some() {
+        // Per-user key from the admin-managed Firestore profile takes
+        // priority over whatever is saved locally for the Groq provider.
+        groq_session_key.unwrap()
     } else {
         match SettingsRepository::get_api_key(pool, model_provider).await {
             Ok(Some(key)) if !key.is_empty() => key,

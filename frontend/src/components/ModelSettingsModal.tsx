@@ -17,7 +17,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
-import { Lock, Unlock, Eye, EyeOff, RefreshCw, CheckCircle2, XCircle, ChevronDown, ChevronUp, Download, ExternalLink, Check, ChevronsUpDown } from 'lucide-react';
+import { Lock, Unlock, Eye, EyeOff, RefreshCw, CheckCircle2, XCircle, ChevronDown, ChevronUp, Download, ExternalLink, Check, ChevronsUpDown, ShieldCheck } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Command,
@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/command';
 import { cn, isOllamaNotInstalledError } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface ModelConfig {
   provider: 'ollama' | 'groq' | 'claude' | 'openai' | 'openrouter' | 'builtin-ai' | 'custom-openai';
@@ -116,6 +117,7 @@ export function ModelSettingsModal({
   skipInitialFetch = false,
   layout = 'inline',
 }: ModelSettingsModalProps) {
+  const { hasManagedGroqKey } = useAuth();
   // Use ConfigContext if available, fallback to props for backward compatibility
   const configContext = useConfig();
   const modelConfig = configContext?.modelConfig || propsModelConfig;
@@ -233,11 +235,14 @@ export function ModelSettingsModal({
     'custom-openai': customOpenAIModel ? [customOpenAIModel] : [], // User specifies model manually
   };
 
+  const isManagedGroq = modelConfig.provider === 'groq' && hasManagedGroqKey;
+
   const requiresApiKey =
-    modelConfig.provider === 'claude' ||
-    modelConfig.provider === 'groq' ||
-    modelConfig.provider === 'openai' ||
-    modelConfig.provider === 'openrouter';
+    !isManagedGroq &&
+    (modelConfig.provider === 'claude' ||
+      modelConfig.provider === 'groq' ||
+      modelConfig.provider === 'openai' ||
+      modelConfig.provider === 'openrouter');
 
   // Check if Ollama endpoint has changed but models haven't been fetched yet
   const ollamaEndpointChanged = modelConfig.provider === 'ollama' &&
@@ -1067,6 +1072,13 @@ export function ModelSettingsModal({
                 </>
               )}
             </Button>
+          </div>
+        )}
+
+        {isManagedGroq && (
+          <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+            <ShieldCheck className="h-4 w-4 shrink-0" />
+            Chave de API gerenciada pelo administrador para o seu usuário.
           </div>
         )}
 

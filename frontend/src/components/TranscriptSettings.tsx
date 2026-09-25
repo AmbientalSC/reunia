@@ -4,9 +4,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Label } from './ui/label';
-import { Eye, EyeOff, Lock, Unlock } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, ShieldCheck } from 'lucide-react';
 import { ModelManager } from './WhisperModelManager';
 import { ParakeetModelManager } from './ParakeetModelManager';
+import { useAuth } from '@/contexts/AuthContext';
 
 
 export interface TranscriptModelProps {
@@ -22,6 +23,7 @@ export interface TranscriptSettingsProps {
 }
 
 export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelConfig, onModelSelect }: TranscriptSettingsProps) {
+    const { hasManagedGroqKey } = useAuth();
     const [apiKey, setApiKey] = useState<string | null>(transcriptModelConfig.apiKey || null);
     const [showApiKey, setShowApiKey] = useState<boolean>(false);
     const [isApiKeyLocked, setIsApiKeyLocked] = useState<boolean>(true);
@@ -80,7 +82,8 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
         groq: ['whisper-large-v3-turbo', 'whisper-large-v3'],
         openai: ['whisper-1'],
     };
-    const requiresApiKey = transcriptModelConfig.provider === 'deepgram' || transcriptModelConfig.provider === 'elevenLabs' || transcriptModelConfig.provider === 'openai' || transcriptModelConfig.provider === 'groq';
+    const isManagedGroq = transcriptModelConfig.provider === 'groq' && hasManagedGroqKey;
+    const requiresApiKey = !isManagedGroq && (transcriptModelConfig.provider === 'deepgram' || transcriptModelConfig.provider === 'elevenLabs' || transcriptModelConfig.provider === 'openai' || transcriptModelConfig.provider === 'groq');
 
     const handleInputClick = () => {
         if (isApiKeyLocked) {
@@ -199,6 +202,13 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
                         </div>
                     )}
 
+
+                    {isManagedGroq && (
+                        <div className="mx-1 flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+                            <ShieldCheck className="h-4 w-4 shrink-0" />
+                            Chave de API gerenciada pelo administrador para o seu usuário.
+                        </div>
+                    )}
 
                     {requiresApiKey && (
                         <div>

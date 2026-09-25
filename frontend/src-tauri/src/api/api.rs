@@ -328,6 +328,7 @@ pub async fn api_get_meetings<R: Runtime>(
         "api_get_meetings called with auth_token(native) : {}",
         auth_token.is_some()
     );
+    state.require_auth()?;
     let pool = state.db_manager.pool();
     let meetings: Result<Vec<MeetingModel>, sqlx::Error> =
         MeetingsRepository::get_meetings(pool).await;
@@ -365,6 +366,7 @@ pub async fn api_search_transcripts<R: Runtime>(
         auth_token.is_some()
     );
 
+    state.require_auth()?;
     let pool = state.db_manager.pool();
 
     match TranscriptsRepository::search_transcripts(pool, &query).await {
@@ -470,6 +472,7 @@ pub async fn api_get_model_config<R: Runtime>(
     _auth_token: Option<String>,
 ) -> Result<Option<ModelConfig>, String> {
     log_info!("api_get_model_config called (native)");
+    state.require_auth()?;
     let pool = state.db_manager.pool();
 
     match SettingsRepository::get_model_config(pool).await {
@@ -531,6 +534,7 @@ pub async fn api_save_model_config<R: Runtime>(
         &whisper_model,
         &ollama_endpoint
     );
+    state.require_auth()?;
     let pool = state.db_manager.pool();
 
     if let Err(e) = SettingsRepository::save_model_config(
@@ -581,6 +585,7 @@ pub async fn api_get_api_key<R: Runtime>(
         "api_get_api_key called (native) for provider '{}'",
         &provider
     );
+    state.require_auth()?;
     match SettingsRepository::get_api_key(&state.db_manager.pool(), &provider).await {
         Ok(key) => {
             log_info!(
@@ -603,6 +608,7 @@ pub async fn api_get_transcript_config<R: Runtime>(
     _auth_token: Option<String>,
 ) -> Result<Option<TranscriptConfig>, String> {
     log_info!("api_get_transcript_config called (native)");
+    state.require_auth()?;
     let pool = state.db_manager.pool();
 
     match SettingsRepository::get_transcript_config(pool).await {
@@ -659,6 +665,7 @@ pub async fn api_save_transcript_config<R: Runtime>(
         "api_save_transcript_config called (native) for provider '{}'",
         &provider
     );
+    state.require_auth()?;
     let pool = state.db_manager.pool();
 
     if let Err(e) = SettingsRepository::save_transcript_config(pool, &provider, &model).await {
@@ -694,6 +701,7 @@ pub async fn api_get_transcript_api_key<R: Runtime>(
         "api_get_transcript_api_key called (native) for provider '{}'",
         &provider
     );
+    state.require_auth()?;
     match SettingsRepository::get_transcript_api_key(&state.db_manager.pool(), &provider).await {
         Ok(key) => {
             log_info!(
@@ -724,6 +732,7 @@ pub async fn api_delete_api_key<R: Runtime>(
         "log_api_delete_api_key called (native) for provider '{}'",
         &provider
     );
+    state.require_auth()?;
     match SettingsRepository::delete_api_key(&state.db_manager.pool(), &provider).await {
         Ok(_) => {
             log_info!("Successfully deleted API key for provider '{}'.", &provider);
@@ -753,6 +762,7 @@ pub async fn api_delete_meeting<R: Runtime>(
         auth_token.is_some()
     );
 
+    state.require_auth()?;
     let pool = state.db_manager.pool();
 
     match MeetingsRepository::delete_meeting(pool, &meeting_id).await {
@@ -790,6 +800,7 @@ pub async fn api_get_meeting<R: Runtime>(
         auth_token.is_some()
     );
 
+    state.require_auth()?;
     let pool = state.db_manager.pool();
 
     match MeetingsRepository::get_meeting(pool, &meeting_id).await {
@@ -815,8 +826,12 @@ pub async fn api_get_meeting_metadata<R: Runtime>(
     meeting_id: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<MeetingMetadata, String> {
-    log_info!("api_get_meeting_metadata called for meeting_id: {}", meeting_id);
+    log_info!(
+        "api_get_meeting_metadata called for meeting_id: {}",
+        meeting_id
+    );
 
+    state.require_auth()?;
     let pool = state.db_manager.pool();
 
     match MeetingsRepository::get_meeting_metadata(pool, &meeting_id).await {
@@ -857,9 +872,12 @@ pub async fn api_get_meeting_transcripts<R: Runtime>(
         offset
     );
 
+    state.require_auth()?;
     let pool = state.db_manager.pool();
 
-    match MeetingsRepository::get_meeting_transcripts_paginated(pool, &meeting_id, limit, offset).await {
+    match MeetingsRepository::get_meeting_transcripts_paginated(pool, &meeting_id, limit, offset)
+        .await
+    {
         Ok((transcripts, total_count)) => {
             log_info!(
                 "Successfully retrieved {} transcripts for meeting {} (total: {})",
@@ -890,7 +908,11 @@ pub async fn api_get_meeting_transcripts<R: Runtime>(
             })
         }
         Err(e) => {
-            log_error!("Error retrieving transcripts for meeting {}: {}", meeting_id, e);
+            log_error!(
+                "Error retrieving transcripts for meeting {}: {}",
+                meeting_id,
+                e
+            );
             Err(format!("Falha ao recuperar as transcrições: {}", e))
         }
     }
@@ -909,6 +931,7 @@ pub async fn api_save_meeting_title<R: Runtime>(
         meeting_id,
         auth_token.is_some()
     );
+    state.require_auth()?;
     let pool = state.db_manager.pool();
     match MeetingsRepository::update_meeting_title(pool, &meeting_id, &title).await {
         Ok(true) => {
@@ -917,7 +940,10 @@ pub async fn api_save_meeting_title<R: Runtime>(
         }
         Ok(false) => {
             log_error!("No meeting found with id {}", meeting_id);
-            Err(format!("Nenhuma reunião encontrada com o id {}", meeting_id))
+            Err(format!(
+                "Nenhuma reunião encontrada com o id {}",
+                meeting_id
+            ))
         }
         Err(e) => {
             log_error!("Failed to update meeting {}", e);
@@ -943,6 +969,8 @@ pub async fn api_save_transcript<R: Runtime>(
         auth_token.is_some()
     );
 
+    let owner_uid = state.require_auth()?.uid;
+
     // Log first transcript for debugging
     if let Some(first) = transcripts.first() {
         log_debug!(
@@ -958,7 +986,10 @@ pub async fn api_save_transcript<R: Runtime>(
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| {
             log_error!("Failed to parse transcript segments: {}", e);
-            format!("Invalid transcript data format: {}. Please check the data structure.", e)
+            format!(
+                "Invalid transcript data format: {}. Please check the data structure.",
+                e
+            )
         })?;
 
     // Log parsed segments count and first segment details
@@ -978,6 +1009,7 @@ pub async fn api_save_transcript<R: Runtime>(
         &meeting_title,
         &transcripts_to_save,
         folder_path,
+        Some(&owner_uid),
     )
     .await
     {
@@ -1012,6 +1044,7 @@ pub async fn open_meeting_folder<R: Runtime>(
 ) -> Result<(), String> {
     log_info!("open_meeting_folder called for meeting_id: {}", meeting_id);
 
+    state.require_auth()?;
     let pool = state.db_manager.pool();
 
     // Get meeting with folder_path
@@ -1150,7 +1183,16 @@ pub async fn open_external_url(url: String) -> Result<(), String> {
     use std::process::Command;
 
     let result = if cfg!(target_os = "windows") {
-        Command::new("cmd").args(&["/C", "start", &url]).output()
+        // NOT `cmd /C start <url>`: std::process::Command only quotes an
+        // argument on Windows when it contains a space — a URL with `&` in
+        // its query string (any URL with 2+ params) sails through unquoted,
+        // and cmd.exe then parses `&` as its own command separator,
+        // silently truncating the URL at the first query parameter. Calling
+        // the shell's URL handler directly via rundll32 sidesteps cmd.exe's
+        // command-line parsing entirely.
+        Command::new("rundll32")
+            .args(&["url.dll,FileProtocolHandler", &url])
+            .output()
     } else if cfg!(target_os = "macos") {
         Command::new("open").arg(&url).output()
     } else {
@@ -1184,6 +1226,8 @@ pub async fn api_save_custom_openai_config<R: Runtime>(
         &endpoint,
         &model
     );
+
+    state.require_auth()?;
 
     // Validate required fields
     if endpoint.trim().is_empty() {
@@ -1228,7 +1272,10 @@ pub async fn api_save_custom_openai_config<R: Runtime>(
 
     match SettingsRepository::save_custom_openai_config(pool, &config).await {
         Ok(()) => {
-            log_info!("✅ Successfully saved custom OpenAI config for endpoint: {}", config.endpoint);
+            log_info!(
+                "✅ Successfully saved custom OpenAI config for endpoint: {}",
+                config.endpoint
+            );
             Ok(serde_json::json!({
                 "status": "success",
                 "message": "Configuração do Custom OpenAI salva com sucesso"
@@ -1236,7 +1283,10 @@ pub async fn api_save_custom_openai_config<R: Runtime>(
         }
         Err(e) => {
             log_error!("❌ Failed to save custom OpenAI config: {}", e);
-            Err(format!("Falha ao salvar a configuração do Custom OpenAI: {}", e))
+            Err(format!(
+                "Falha ao salvar a configuração do Custom OpenAI: {}",
+                e
+            ))
         }
     }
 }
@@ -1249,13 +1299,17 @@ pub async fn api_get_custom_openai_config<R: Runtime>(
 ) -> Result<Option<CustomOpenAIConfig>, String> {
     log_info!("api_get_custom_openai_config called");
 
+    state.require_auth()?;
     let pool = state.db_manager.pool();
 
     match SettingsRepository::get_custom_openai_config(pool).await {
         Ok(config) => {
             if let Some(ref c) = config {
-                log_info!("✅ Found custom OpenAI config: endpoint='{}', model='{}'",
-                    c.endpoint, c.model);
+                log_info!(
+                    "✅ Found custom OpenAI config: endpoint='{}', model='{}'",
+                    c.endpoint,
+                    c.model
+                );
             } else {
                 log_info!("No custom OpenAI config found");
             }
@@ -1263,7 +1317,10 @@ pub async fn api_get_custom_openai_config<R: Runtime>(
         }
         Err(e) => {
             log_error!("❌ Failed to get custom OpenAI config: {}", e);
-            Err(format!("Falha ao obter a configuração do Custom OpenAI: {}", e))
+            Err(format!(
+                "Falha ao obter a configuração do Custom OpenAI: {}",
+                e
+            ))
         }
     }
 }
@@ -1338,7 +1395,7 @@ pub async fn api_test_custom_openai_connection<R: Runtime>(
                                             .get("message")
                                             .and_then(|m| {
                                                 m.get("content")
-                                                .or_else(|| m.get("reasoning_content"))
+                                                    .or_else(|| m.get("reasoning_content"))
                                             })
                                             .is_some();
 
@@ -1356,17 +1413,30 @@ pub async fn api_test_custom_openai_connection<R: Runtime>(
                         }
 
                         // Response was 200 but doesn't match OpenAI format
-                        log_warn!("⚠️ Endpoint returned 200 but response doesn't match OpenAI format: {}", response_text);
+                        log_warn!(
+                            "⚠️ Endpoint returned 200 but response doesn't match OpenAI format: {}",
+                            response_text
+                        );
                         Err("O endpoint está acessível, mas não parece ser compatível com OpenAI. A resposta não contém a matriz 'choices' ou o campo 'message.content' / 'message.reasoning_content'.".to_string())
                     }
                     Err(e) => {
-                        log_warn!("⚠️ Endpoint returned 200 but response is not valid JSON: {}", e);
+                        log_warn!(
+                            "⚠️ Endpoint returned 200 but response is not valid JSON: {}",
+                            e
+                        );
                         Err(format!("O endpoint está acessível, mas retornou JSON inválido: {}. Resposta: {}", e, response_text))
                     }
                 }
             } else {
-                log_warn!("⚠️ Custom OpenAI connection test failed with status {}: {}", status, response_text);
-                Err(format!("Falha na conexão com status {}: {}", status, response_text))
+                log_warn!(
+                    "⚠️ Custom OpenAI connection test failed with status {}: {}",
+                    status,
+                    response_text
+                );
+                Err(format!(
+                    "Falha na conexão com status {}: {}",
+                    status, response_text
+                ))
             }
         }
         Err(e) => {

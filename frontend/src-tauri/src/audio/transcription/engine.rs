@@ -51,10 +51,40 @@ impl TranscriptionEngine {
 // MODEL VALIDATION AND INITIALIZATION
 // ============================================================================
 
+/// Overrides `config.api_key` with the logged-in user's per-profile Groq key
+/// (from the Firestore-managed admin registry) when one is available.
+///
+/// `config` here already comes from `api_get_transcript_config` — the same
+/// command the Settings screen calls to populate its form. We deliberately
+/// don't touch that command or the underlying `settings` table: doing so
+/// would leak the session's Groq key back into the webview. Instead this
+/// override happens only on the two internal call sites that actually
+/// start a Groq transcription, after the config has already left the
+/// database layer.
+fn apply_groq_session_key<R: Runtime>(
+    app: &AppHandle<R>,
+    config: &mut crate::api::api::TranscriptConfig,
+) {
+    if config.provider != "groq" {
+        return;
+    }
+    let Some(state) = app.try_state::<crate::state::AppState>() else {
+        return;
+    };
+    if let Some(key) = state
+        .require_auth()
+        .ok()
+        .and_then(|session| session.groq_api_key)
+        .filter(|key| !key.trim().is_empty())
+    {
+        config.api_key = Some(key);
+    }
+}
+
 /// Validate that transcription models (Whisper or Parakeet) are ready before starting recording
 pub async fn validate_transcription_model_ready<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
     // Check transcript configuration to determine which engine to validate
-    let config = match crate::api::api::api_get_transcript_config(
+    let mut config = match crate::api::api::api_get_transcript_config(
         app.clone(),
         app.clone().state(),
         None,
@@ -85,6 +115,7 @@ pub async fn validate_transcription_model_ready<R: Runtime>(app: &AppHandle<R>) 
             }
         }
     };
+    apply_groq_session_key(app, &mut config);
 
     // Validate based on provider
     match config.provider.as_str() {
@@ -163,7 +194,7 @@ pub async fn get_or_init_transcription_engine<R: Runtime>(
     app: &AppHandle<R>,
 ) -> Result<TranscriptionEngine, String> {
     // Get provider configuration from API
-    let config = match crate::api::api::api_get_transcript_config(
+    let mut config = match crate::api::api::api_get_transcript_config(
         app.clone(),
         app.clone().state(),
         None,
@@ -194,6 +225,7 @@ pub async fn get_or_init_transcription_engine<R: Runtime>(
             }
         }
     };
+    apply_groq_session_key(app, &mut config);
 
     // Initialize the appropriate engine based on provider
     match config.provider.as_str() {

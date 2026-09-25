@@ -6,7 +6,6 @@ use crate::audio::transcription::groq_provider::GroqProvider;
 use crate::audio::transcription::provider::TranscriptionProvider;
 use crate::audio::vad::get_speech_chunks_with_progress;
 use crate::config::{DEFAULT_WHISPER_MODEL, DEFAULT_PARAKEET_MODEL};
-use crate::database::repositories::setting::SettingsRepository;
 use crate::parakeet_engine::ParakeetEngine;
 use crate::state::AppState;
 use crate::whisper_engine::WhisperEngine;
@@ -782,9 +781,9 @@ async fn get_or_init_groq_provider<R: Runtime>(
         .try_state::<AppState>()
         .ok_or_else(|| anyhow!("Estado do aplicativo indisponível"))?;
 
-    let api_key = SettingsRepository::get_transcript_api_key(app_state.db_manager.pool(), "groq")
+    let api_key = crate::auth::groq_key::resolve_groq_api_key(&app_state, app_state.db_manager.pool(), true)
         .await
-        .map_err(|e| anyhow!("Falha ao buscar a chave de API do Groq: {}", e))?
+        .map_err(|e| anyhow!(e))?
         .filter(|key| !key.trim().is_empty())
         .ok_or_else(|| {
             anyhow!(

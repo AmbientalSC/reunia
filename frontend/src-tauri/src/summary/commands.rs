@@ -1,15 +1,12 @@
 use crate::database::repositories::{
-    meeting::MeetingsRepository,
-    summary::SummaryProcessesRepository, transcript_chunk::TranscriptChunksRepository,
-    visual_summary::VisualSummariesRepository,
+    meeting::MeetingsRepository, summary::SummaryProcessesRepository,
+    transcript_chunk::TranscriptChunksRepository, visual_summary::VisualSummariesRepository,
 };
 use crate::state::AppState;
+use crate::summary::language_detection::{detect_summary_language, SummaryLanguageDetection};
 use crate::summary::metadata::{
     read_detected_summary_language_from_metadata, read_summary_language_from_metadata,
     write_detected_summary_language_to_metadata, write_summary_language_to_metadata,
-};
-use crate::summary::language_detection::{
-    detect_summary_language, SummaryLanguageDetection,
 };
 use crate::summary::service::SummaryService;
 use log::{error as log_error, info as log_info, warn as log_warn};
@@ -94,6 +91,7 @@ pub async fn api_save_meeting_summary<R: Runtime>(
         "api_save_meeting_summary (native) called for meeting_id: {}",
         meeting_id
     );
+    state.require_auth()?;
     let pool = state.db_manager.pool();
 
     match SummaryProcessesRepository::update_meeting_summary(pool, &meeting_id, &summary).await {
@@ -129,6 +127,7 @@ pub async fn api_get_meeting_summary_language<R: Runtime>(
         meeting_id
     );
 
+    state.require_auth()?;
     match resolve_meeting_folder(state.db_manager.pool(), &meeting_id).await? {
         MeetingFolderResolution::Folder(folder) => read_summary_language_from_metadata(&folder)
             .map(MeetingSummaryLanguagePreference::metadata)
@@ -151,6 +150,7 @@ pub async fn api_save_meeting_summary_language<R: Runtime>(
         summary_language
     );
 
+    state.require_auth()?;
     match resolve_meeting_folder(state.db_manager.pool(), &meeting_id).await? {
         MeetingFolderResolution::Folder(folder) => {
             write_summary_language_to_metadata(&folder, summary_language.as_deref())
@@ -175,10 +175,13 @@ pub async fn api_get_meeting_detected_summary_language<R: Runtime>(
         meeting_id
     );
 
+    state.require_auth()?;
     match resolve_meeting_folder(state.db_manager.pool(), &meeting_id).await? {
-        MeetingFolderResolution::Folder(folder) => read_detected_summary_language_from_metadata(&folder)
-            .map(MeetingSummaryLanguagePreference::metadata)
-            .map_err(|e| e.to_string()),
+        MeetingFolderResolution::Folder(folder) => {
+            read_detected_summary_language_from_metadata(&folder)
+                .map(MeetingSummaryLanguagePreference::metadata)
+                .map_err(|e| e.to_string())
+        }
         MeetingFolderResolution::NoFolder => Ok(MeetingSummaryLanguagePreference::local_fallback()),
     }
 }
@@ -197,10 +200,14 @@ pub async fn api_save_meeting_detected_summary_language<R: Runtime>(
         detected_summary_language
     );
 
+    state.require_auth()?;
     match resolve_meeting_folder(state.db_manager.pool(), &meeting_id).await? {
         MeetingFolderResolution::Folder(folder) => {
-            write_detected_summary_language_to_metadata(&folder, detected_summary_language.as_deref())
-                .map_err(|e| e.to_string())?;
+            write_detected_summary_language_to_metadata(
+                &folder,
+                detected_summary_language.as_deref(),
+            )
+            .map_err(|e| e.to_string())?;
             read_detected_summary_language_from_metadata(&folder)
                 .map(MeetingSummaryLanguagePreference::metadata)
                 .map_err(|e| e.to_string())
@@ -239,9 +246,17 @@ pub async fn api_generate_live_insight<R: Runtime>(
         text.len()
     );
 
+    let session = state.require_auth()?;
     let pool = state.db_manager.pool();
     let app_data_dir = app.path().app_data_dir().ok();
-    let config = visual::resolve_visual_llm_config(pool, &model, &model_name, app_data_dir).await?;
+    let config = visual::resolve_visual_llm_config(
+        pool,
+        &model,
+        &model_name,
+        app_data_dir,
+        session.groq_api_key,
+    )
+    .await?;
 
     crate::summary::live_insight::generate_live_insight(
         &config.provider,
@@ -289,6 +304,7 @@ pub async fn api_get_summary<R: Runtime>(
         "api_get_summary (native) called for meeting_id: {}",
         meeting_id
     );
+    state.require_auth()?;
     let pool = state.db_manager.pool();
 
     match SummaryProcessesRepository::get_summary_data_for_meeting(pool, &meeting_id).await {
@@ -398,6 +414,7 @@ pub async fn api_process_transcript<R: Runtime>(
         &model
     );
 
+    state.require_auth()?;
     let pool = state.db_manager.pool().clone();
     let final_prompt = custom_prompt.unwrap_or_else(|| "".to_string());
     let final_template_id = template_id.unwrap_or_else(|| "daily_standup".to_string());
@@ -405,7 +422,11 @@ pub async fn api_process_transcript<R: Runtime>(
     // Normalise empty / whitespace-only to None so "" and null behave identically
     let summary_language = summary_language.and_then(|s| {
         let t = s.trim();
-        if t.is_empty() { None } else { Some(t.to_string()) }
+        if t.is_empty() {
+            None
+        } else {
+            Some(t.to_string())
+        }
     });
 
     // Create or reset the process entry in the database
@@ -465,6 +486,7 @@ pub async fn api_get_visual_summary<R: Runtime>(
     state: tauri::State<'_, AppState>,
     meeting_id: String,
 ) -> Result<VisualSummaryResponse, String> {
+    state.require_auth()?;
     let pool = state.db_manager.pool();
 
     match VisualSummariesRepository::get(pool, &meeting_id).await {
@@ -473,7 +495,11 @@ pub async fn api_get_visual_summary<R: Runtime>(
                 match serde_json::from_str::<serde_json::Value>(raw) {
                     Ok(parsed) => Some(parsed),
                     Err(e) => {
-                        log_error!("Failed to parse visual summary JSON for {}: {}", meeting_id, e);
+                        log_error!(
+                            "Failed to parse visual summary JSON for {}: {}",
+                            meeting_id,
+                            e
+                        );
                         None
                     }
                 }
@@ -519,6 +545,7 @@ pub async fn api_generate_visual_summary<R: Runtime>(
         meeting_id,
         model
     );
+    let session = state.require_auth()?;
     let pool = state.db_manager.pool();
 
     // The visual summary is derived from the regular summary markdown
@@ -531,7 +558,12 @@ pub async fn api_generate_visual_summary<R: Runtime>(
         .result
         .as_deref()
         .and_then(|raw| serde_json::from_str::<serde_json::Value>(raw).ok())
-        .and_then(|value| value.get("markdown").and_then(|m| m.as_str()).map(str::to_string))
+        .and_then(|value| {
+            value
+                .get("markdown")
+                .and_then(|m| m.as_str())
+                .map(str::to_string)
+        })
         .filter(|markdown| !markdown.trim().is_empty())
         .ok_or_else(|| {
             "Nenhum resumo em markdown disponível. Regenere o resumo da reunião primeiro."
@@ -545,7 +577,14 @@ pub async fn api_generate_visual_summary<R: Runtime>(
         .map(|m| m.title);
 
     let app_data_dir = app.path().app_data_dir().ok();
-    let config = visual::resolve_visual_llm_config(pool, &model, &model_name, app_data_dir).await?;
+    let config = visual::resolve_visual_llm_config(
+        pool,
+        &model,
+        &model_name,
+        app_data_dir,
+        session.groq_api_key,
+    )
+    .await?;
 
     let pool_clone = pool.clone();
     tauri::async_runtime::spawn(visual::generate_visual_summary_background(
@@ -576,6 +615,8 @@ pub async fn api_cancel_summary<R: Runtime>(
 ) -> Result<serde_json::Value, String> {
     log_info!("api_cancel_summary called for meeting_id: {}", meeting_id);
 
+    state.require_auth()?;
+
     // Trigger cancellation via the service (main summary + chained visual)
     let outcome = SummaryService::cancel_summary(&meeting_id);
 
@@ -585,20 +626,35 @@ pub async fn api_cancel_summary<R: Runtime>(
     // its own visual_summaries row when its token fires.
     if outcome.summary_cancelled {
         let pool = state.db_manager.pool();
-        if let Err(e) = SummaryProcessesRepository::update_process_cancelled(pool, &meeting_id).await {
-            log_error!("Failed to update DB status to cancelled for {}: {}", meeting_id, e);
-            return Err(format!("Falha ao atualizar o status de cancelamento: {}", e));
+        if let Err(e) =
+            SummaryProcessesRepository::update_process_cancelled(pool, &meeting_id).await
+        {
+            log_error!(
+                "Failed to update DB status to cancelled for {}: {}",
+                meeting_id,
+                e
+            );
+            return Err(format!(
+                "Falha ao atualizar o status de cancelamento: {}",
+                e
+            ));
         }
     }
 
     if outcome.any() {
-        log_info!("Successfully cancelled summary generation for meeting_id: {}", meeting_id);
+        log_info!(
+            "Successfully cancelled summary generation for meeting_id: {}",
+            meeting_id
+        );
         Ok(serde_json::json!({
             "message": "Geração de resumo cancelada com sucesso",
             "meeting_id": meeting_id,
         }))
     } else {
-        log_warn!("No active summary generation found for meeting_id: {}", meeting_id);
+        log_warn!(
+            "No active summary generation found for meeting_id: {}",
+            meeting_id
+        );
         Ok(serde_json::json!({
             "message": "Nenhuma geração de resumo ativa para cancelar",
             "meeting_id": meeting_id,

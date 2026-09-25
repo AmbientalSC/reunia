@@ -12,6 +12,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { listen, UnlistenFn } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import { LoginScreen } from '@/components/auth/LoginScreen'
 import { RecordingStateProvider } from '@/contexts/RecordingStateContext'
 import { OllamaDownloadProvider } from '@/contexts/OllamaDownloadContext'
 import { TranscriptProvider } from '@/contexts/TranscriptContext'
@@ -67,6 +69,24 @@ function ConditionalImportDialog({
       preselectedFile={importFilePath}
     />
   );
+}
+
+// Module-level component — stable reference across RootLayout re-renders,
+// same reasoning as ConditionalImportDialog above. Gates the whole app
+// behind Firebase auth before any provider below it (and its Tauri IPC
+// calls) mounts.
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="flex h-screen w-screen bg-white" />;
+  }
+
+  if (!isAuthenticated) {
+    return <LoginScreen />;
+  }
+
+  return <>{children}</>;
 }
 
 // export { metadata } from './metadata'
@@ -241,48 +261,52 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${poppins.variable}`}>
       <body className={`font-sans antialiased`}>
-        <AnalyticsProvider>
-          <RecordingStateProvider>
-            <TranscriptProvider>
-              <ConfigProvider>
-                <OllamaDownloadProvider>
-                  <OnboardingProvider>
-                    <UpdateCheckProvider>
-                      <SidebarProvider>
-                        <TooltipProvider>
-                          <RecordingPostProcessingProvider>
-                            <ImportDialogProvider onOpen={handleOpenImportDialog}>
-                              {/* Download progress toast provider - listens for background downloads */}
-                              <DownloadProgressToastProvider />
+        <AuthProvider>
+          <AuthGate>
+            <AnalyticsProvider>
+              <RecordingStateProvider>
+                <TranscriptProvider>
+                  <ConfigProvider>
+                    <OllamaDownloadProvider>
+                      <OnboardingProvider>
+                        <UpdateCheckProvider>
+                          <SidebarProvider>
+                            <TooltipProvider>
+                              <RecordingPostProcessingProvider>
+                                <ImportDialogProvider onOpen={handleOpenImportDialog}>
+                                  {/* Download progress toast provider - listens for background downloads */}
+                                  <DownloadProgressToastProvider />
 
-                              {/* Show onboarding or main app */}
-                              {showOnboarding ? (
-                                <OnboardingFlow onComplete={handleOnboardingComplete} />
-                              ) : (
-                                <div className="flex">
-                                  <Sidebar />
-                                  <MainContent>{children}</MainContent>
-                                </div>
-                              )}
-                              {/* Import audio overlay and dialog */}
-                              <ImportDropOverlay visible={showDropOverlay} />
-                              <ConditionalImportDialog
-                                showImportDialog={showImportDialog}
-                                handleImportDialogClose={handleImportDialogClose}
-                                importFilePath={importFilePath}
-                              />
-                            </ImportDialogProvider>
-                          </RecordingPostProcessingProvider>
-                        </TooltipProvider>
-                      </SidebarProvider>
-                    </UpdateCheckProvider>
-                  </OnboardingProvider>
+                                  {/* Show onboarding or main app */}
+                                  {showOnboarding ? (
+                                    <OnboardingFlow onComplete={handleOnboardingComplete} />
+                                  ) : (
+                                    <div className="flex">
+                                      <Sidebar />
+                                      <MainContent>{children}</MainContent>
+                                    </div>
+                                  )}
+                                  {/* Import audio overlay and dialog */}
+                                  <ImportDropOverlay visible={showDropOverlay} />
+                                  <ConditionalImportDialog
+                                    showImportDialog={showImportDialog}
+                                    handleImportDialogClose={handleImportDialogClose}
+                                    importFilePath={importFilePath}
+                                  />
+                                </ImportDialogProvider>
+                              </RecordingPostProcessingProvider>
+                            </TooltipProvider>
+                          </SidebarProvider>
+                        </UpdateCheckProvider>
+                      </OnboardingProvider>
 
-                </OllamaDownloadProvider>
-              </ConfigProvider>
-            </TranscriptProvider>
-          </RecordingStateProvider>
-        </AnalyticsProvider>
+                    </OllamaDownloadProvider>
+                  </ConfigProvider>
+                </TranscriptProvider>
+              </RecordingStateProvider>
+            </AnalyticsProvider>
+          </AuthGate>
+        </AuthProvider>
 
         <Toaster position="bottom-center" richColors closeButton />
       </body>
