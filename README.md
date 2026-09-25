@@ -33,9 +33,9 @@ O ReunIA é um assistente de reuniões com IA que roda inteiramente na máquina 
 ## Funcionalidades
 
 - **Transcrição em tempo real:** acompanhe a transcrição da reunião enquanto ela acontece.
+- **Insights em tempo real:** gera insights em tempo real com IA no meio da reunião.
 - **Resumos com IA:** gere resumos automáticos usando modelos de linguagem.
 - **Multiplataforma:** funciona em macOS e Windows.
-- **Provedor de IA flexível:** escolha entre Ollama (local), Claude, Groq, OpenRouter, ou use seu próprio endpoint compatível com OpenAI.
 - **Autenticação corporativa:** login via Microsoft (Azure AD, single-tenant Ambiental) com perfis administrados via Firestore.
 
 ## Instalação
