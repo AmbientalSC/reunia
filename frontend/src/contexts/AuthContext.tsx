@@ -112,6 +112,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.error('[AuthContext] Enterprise provider auto-setup failed:', setupError);
             // Non-fatal: user still gets in, just lands on the onboarding
             // flow instead of a pre-configured app.
+          } finally {
+            // RootLayout reads onboarding status once on mount, racing this
+            // login flow — on a fresh install that read finishes before
+            // auto-setup marks onboarding complete, leaving it stuck on a
+            // stale "not complete" state (blank screen, see layout.tsx).
+            // Tell it to re-check now that the backend status is final.
+            window.dispatchEvent(new CustomEvent('reunia:onboarding-status-changed'));
           }
         }
 

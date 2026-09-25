@@ -104,8 +104,7 @@ export default function RootLayout({
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [importFilePath, setImportFilePath] = useState<string | null>(null)
 
-  useEffect(() => {
-    // Check onboarding status first
+  const checkOnboardingStatus = useCallback(() => {
     invoke<{ completed: boolean } | null>('get_onboarding_status')
       .then((status) => {
         const isComplete = status?.completed ?? false
@@ -116,6 +115,7 @@ export default function RootLayout({
           setShowOnboarding(true)
         } else {
           console.log('[Layout] Onboarding completed, showing main app')
+          setShowOnboarding(false)
         }
       })
       .catch((error) => {
@@ -125,6 +125,19 @@ export default function RootLayout({
         setOnboardingCompleted(false)
       })
   }, [])
+
+  useEffect(() => {
+    checkOnboardingStatus()
+  }, [checkOnboardingStatus])
+
+  useEffect(() => {
+    // Fired by AuthContext once enterprise auto-setup (Groq-managed profiles)
+    // finishes marking onboarding complete on the backend — see comment
+    // there. Re-checking here fixes the race: the initial check above can
+    // resolve "not complete" before login finishes auto-configuring it.
+    window.addEventListener('reunia:onboarding-status-changed', checkOnboardingStatus)
+    return () => window.removeEventListener('reunia:onboarding-status-changed', checkOnboardingStatus)
+  }, [checkOnboardingStatus])
 
   // Disable context menu in production
   useEffect(() => {
