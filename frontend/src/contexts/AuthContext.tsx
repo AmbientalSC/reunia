@@ -10,6 +10,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/config/firebase';
 import { fetchUserProfile } from '@/lib/userProfile';
+import { autoConfigureEnterpriseProviders } from '@/lib/enterpriseSetup';
 
 const ALLOWED_EMAIL_DOMAIN = '@ambiental.sc';
 const NOT_REGISTERED_MESSAGE =
@@ -103,6 +104,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           expiresAt,
           groqApiKey: profile.groqApiKey ?? null,
         });
+
+        if (profile.groqApiKey?.trim()) {
+          try {
+            await autoConfigureEnterpriseProviders();
+          } catch (setupError) {
+            console.error('[AuthContext] Enterprise provider auto-setup failed:', setupError);
+            // Non-fatal: user still gets in, just lands on the onboarding
+            // flow instead of a pre-configured app.
+          }
+        }
+
         setUser(firebaseUser);
         setHasManagedGroqKey(!!profile.groqApiKey?.trim());
         setIsAdmin(profile.role === 'admin');
