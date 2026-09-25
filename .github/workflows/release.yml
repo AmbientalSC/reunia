@@ -84,7 +84,8 @@ jobs:
             return data.id
 
   # STEP 2: Build all platforms and upload directly to release
-  # Note: Linux builds are excluded from release (only macOS and Windows)
+  # Note: only Windows for now — macOS needs an Apple Developer certificate
+  # the Ambiental doesn't have yet; Linux was already excluded upstream.
   build-all-platforms:
     needs: create-release
     permissions:
@@ -93,9 +94,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: "macos-latest" # for Apple Silicon only (M1 and above)
-            args: "--target aarch64-apple-darwin"
-            target: "aarch64-apple-darwin"
           - platform: "windows-latest"
             args: ""
             target: "x86_64-pc-windows-msvc"
