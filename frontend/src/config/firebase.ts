@@ -1,6 +1,7 @@
 import { initializeApp, getApps, type FirebaseOptions } from 'firebase/app';
 import { getAuth, initializeAuth, indexedDBLocalPersistence, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getFunctions, type Functions } from 'firebase/functions';
 
 const firebaseConfig: FirebaseOptions = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -30,3 +31,7 @@ export const auth: Auth = authInstance;
 
 // Central registry of pre-authorized users (see src/lib/userProfile.ts).
 export const firestore: Firestore = getFirestore(firebaseApp);
+
+// Admin callables (functions/src/adminUsers.ts) live in the same region as
+// exchangeMicrosoftToken.
+export const functions: Functions = getFunctions(firebaseApp, 'us-central1');

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { ArrowLeft, Settings2, Mic, Database as DatabaseIcon, SparkleIcon, FlaskConical } from 'lucide-react';
+import { ArrowLeft, Settings2, Mic, Database as DatabaseIcon, SparkleIcon, FlaskConical, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { invoke } from '@tauri-apps/api/core';
 import { motion } from 'framer-motion';
@@ -10,6 +10,8 @@ import { RecordingSettings } from '@/components/RecordingSettings';
 import { PreferenceSettings } from '@/components/PreferenceSettings';
 import { SummaryModelSettings } from '@/components/SummaryModelSettings';
 import { BetaSettings } from '@/components/BetaSettings';
+import { AdminUsersTab } from '@/components/admin/AdminUsersTab';
+import { useAuth } from '@/contexts/AuthContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
@@ -22,9 +24,13 @@ const TABS = [
   { value: 'beta', label: 'Beta', icon: FlaskConical }
 ] as const;
 
+const ADMIN_TAB = { value: 'admin', label: 'Admin', icon: ShieldCheck } as const;
+
 export default function SettingsPage() {
   const router = useRouter();
   const { transcriptModelConfig, setTranscriptModelConfig } = useConfig();
+  const { isAdmin } = useAuth();
+  const tabs = isAdmin ? [...TABS, ADMIN_TAB] : TABS;
 
   // Animation state for tabs
   const [activeTab, setActiveTab] = useState('general');
@@ -53,14 +59,14 @@ export default function SettingsPage() {
 
   // Update underline position when active tab changes
   useLayoutEffect(() => {
-    const activeIndex = TABS.findIndex(tab => tab.value === activeTab);
+    const activeIndex = tabs.findIndex(tab => tab.value === activeTab);
     const activeTabElement = tabRefs.current[activeIndex];
 
     if (activeTabElement) {
       const { offsetLeft, offsetWidth } = activeTabElement;
       setUnderlineStyle({ left: offsetLeft, width: offsetWidth });
     }
-  }, [activeTab]);
+  }, [activeTab, tabs.length]);
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col">
@@ -86,7 +92,7 @@ export default function SettingsPage() {
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="bg-transparent relative rounded-none border-b border-gray-200 p-0 h-auto">
-              {TABS.map((tab, index) => {
+              {tabs.map((tab, index) => {
                 const Icon = tab.icon;
                 return (
                   <TabsTrigger
@@ -127,6 +133,11 @@ export default function SettingsPage() {
             <TabsContent value="beta" className="mt-6">
               <BetaSettings />
             </TabsContent>
+            {isAdmin && (
+              <TabsContent value="admin">
+                <AdminUsersTab />
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </div>

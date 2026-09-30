@@ -6,6 +6,8 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 initializeApp();
 
+export { listUsers, upsertUser, deleteUser } from './adminUsers';
+
 // Same single-tenant Azure AD app as frontend/src-tauri/src/auth/microsoft.rs.
 // Not secrets — public client identifiers, same reasoning as documented there.
 const AZURE_TENANT_ID = '9afa5a5d-1b9d-46f1-9e93-5689a998a4b2';
