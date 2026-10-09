@@ -1,0 +1,4 @@
+# sqlx guarda o checksum do conteúdo de cada migration (incluindo quebras de linha).
+# Os bancos já criados pelo CI (Windows) usam CRLF; fixar aqui evita que builds locais
+# ou de outras plataformas embutam LF e quebrem com "migration ... was previously applied but has been modified".
+frontend/src-tauri/migrations/*.sql text eol=crlf
