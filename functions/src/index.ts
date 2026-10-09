@@ -6,7 +6,7 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 initializeApp();
 
-export { listUsers, upsertUser, deleteUser } from './adminUsers';
+export { listUsers, upsertUser, setUserGroqKey, deleteUser } from './adminUsers';
 
 // Same single-tenant Azure AD app as frontend/src-tauri/src/auth/microsoft.rs.
 // Not secrets — public client identifiers, same reasoning as documented there.

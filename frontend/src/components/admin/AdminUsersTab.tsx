@@ -3,17 +3,19 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Trash2, UserPlus } from 'lucide-react';
+import { KeyRound, Loader2, Trash2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ConfirmationModal } from '@/components/ConfirmationModel/confirmation-modal';
 import { useAuth } from '@/contexts/AuthContext';
+import { GroqKeyDialog } from './GroqKeyDialog';
 import {
   ALLOWED_EMAIL_DOMAIN,
   deleteUser,
   listUsers,
+  setUserGroqKey,
   upsertUser,
   userFormSchema,
   type ManagedUser,
@@ -32,10 +34,11 @@ export function AdminUsersTab() {
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [groqTarget, setGroqTarget] = useState<ManagedUser | null>(null);
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
-    defaultValues: { email: '', role: 'user' },
+    defaultValues: { email: '', role: 'user', groqApiKey: '' },
   });
 
   const refresh = useCallback(async () => {
@@ -54,9 +57,9 @@ export function AdminUsersTab() {
 
   const save = async (values: UserFormValues) => {
     try {
-      await upsertUser(values);
+      await upsertUser({ ...values, groqApiKey: values.groqApiKey || undefined });
       toast.success(`${values.email} salvo.`);
-      form.reset({ email: '', role: values.role });
+      form.reset({ email: '', role: values.role, groqApiKey: '' });
       await refresh();
     } catch (error) {
       toast.error(errorMessage(error));
@@ -69,6 +72,18 @@ export function AdminUsersTab() {
       await refresh();
     } catch (error) {
       toast.error(errorMessage(error));
+    }
+  };
+
+  const saveGroqKey = async (target: ManagedUser, groqApiKey: string | null) => {
+    try {
+      await setUserGroqKey(target.email, groqApiKey);
+      toast.success(groqApiKey === null ? 'Chave do Groq removida.' : 'Chave do Groq salva.');
+      await refresh();
+    } catch (error) {
+      // The dialog shows the message; refresh in case the user was changed or removed meanwhile.
+      await refresh();
+      throw error;
     }
   };
 
@@ -87,6 +102,7 @@ export function AdminUsersTab() {
 
   const role = form.watch('role');
   const emailError = form.formState.errors.email?.message;
+  const groqKeyError = form.formState.errors.groqApiKey?.message;
 
   return (
     <div className="space-y-6 mt-6">
@@ -95,7 +111,8 @@ export function AdminUsersTab() {
         <p className="text-sm text-gray-600 mb-4">
           Só quem estiver nesta lista consegue entrar no app.
         </p>
-        <form onSubmit={form.handleSubmit(save)} className="flex flex-col gap-3 sm:flex-row sm:items-start">
+        <form onSubmit={form.handleSubmit(save)} className="space-y-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
           <div className="flex-1">
             <Input
               type="email"
@@ -123,6 +140,18 @@ export function AdminUsersTab() {
             )}
             Adicionar
           </Button>
+          </div>
+          <div>
+            <Input
+              type="password"
+              autoComplete="off"
+              placeholder="Chave do Groq (opcional) — gsk_..."
+              aria-label="Chave do Groq"
+              aria-invalid={!!groqKeyError}
+              {...form.register('groqApiKey')}
+            />
+            {groqKeyError && <p className="text-sm text-red-600 mt-1">{groqKeyError}</p>}
+          </div>
         </form>
       </section>
 
@@ -143,6 +172,17 @@ export function AdminUsersTab() {
                     {isSelf && <span className="ml-2 text-xs text-gray-500">(você)</span>}
                     {!target.authorized && <span className="ml-2 text-xs text-red-600">(bloqueado)</span>}
                   </span>
+                  <span className={`text-xs ${target.hasGroqKey ? 'text-green-700' : 'text-gray-500'}`}>
+                    {target.hasGroqKey ? 'Groq configurado' : 'Sem chave Groq'}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Chave do Groq de ${target.email}`}
+                    onClick={() => setGroqTarget(target)}
+                  >
+                    <KeyRound className="w-4 h-4" />
+                  </Button>
                   <Select
                     value={target.role}
                     disabled={isSelf}
@@ -171,6 +211,8 @@ export function AdminUsersTab() {
           </ul>
         )}
       </section>
+
+      <GroqKeyDialog target={groqTarget} onClose={() => setGroqTarget(null)} onSave={saveGroqKey} />
 
       <ConfirmationModal
         isOpen={pendingDelete !== null}
