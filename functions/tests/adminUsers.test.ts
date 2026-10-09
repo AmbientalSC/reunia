@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-const { parseGroqApiKey } = await import("../../../functions/src/adminUsers");
+const { parseGroqApiKey } = await import("../src/adminUsers");
 
 const VALID_KEY = `gsk_${"a1B2".repeat(13)}`;
 
@@ -38,7 +38,7 @@ describe("parseGroqApiKey", () => {
   });
 });
 
-const { toManagedUser, buildProfileUpdate } = await import("../../../functions/src/adminUsers");
+const { toManagedUser, buildProfileUpdate } = await import("../src/adminUsers");
 
 describe("toManagedUser", () => {
   test("never exposes the stored Groq key, only whether one exists", () => {
