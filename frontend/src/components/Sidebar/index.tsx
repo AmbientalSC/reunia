@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { useRecordingState } from '@/contexts/RecordingStateContext';
 import { useImportDialog } from '@/contexts/ImportDialogContext';
 import { useConfig } from '@/contexts/ConfigContext';
+import { useAppVersion } from '@/hooks/useAppVersion';
 
 import {
   Dialog,
@@ -61,6 +62,7 @@ const Sidebar: React.FC = () => {
   const { isRecording } = useRecordingState();
   const { openImportDialog } = useImportDialog();
   const { betaFeatures } = useConfig();
+  const appVersion = useAppVersion();
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['meetings']));
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showModelSettings, setShowModelSettings] = useState(false);
@@ -810,9 +812,11 @@ const Sidebar: React.FC = () => {
               <span>Configurações</span>
             </button>
             <Info isCollapsed={isCollapsed} />
-            <div className="w-full flex items-center justify-center px-3 py-1 text-xs text-gray-400">
-              v0.4.0
-            </div>
+            {appVersion && (
+              <div className="w-full flex items-center justify-center px-3 py-1 text-xs text-gray-400">
+                v{appVersion}
+              </div>
+            )}
           </div>
         )}
       </div>
