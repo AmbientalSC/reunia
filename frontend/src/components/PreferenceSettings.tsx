@@ -21,6 +21,13 @@ export function PreferenceSettings() {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [previousNotificationsEnabled, setPreviousNotificationsEnabled] = useState<boolean | null>(null);
   const hasTrackedViewRef = useRef(false);
+  const [logDirectory, setLogDirectory] = useState<string | null>(null);
+
+  useEffect(() => {
+    invoke<string>('get_log_directory')
+      .then(setLogDirectory)
+      .catch((error) => console.error('Failed to get log directory:', error));
+  }, []);
 
   // Lazy load preferences on mount (only loads if not already cached)
   useEffect(() => {
@@ -110,7 +117,7 @@ export function PreferenceSettings() {
     handleUpdateNotificationSettings();
   }, [notificationsEnabled, notificationSettings, isInitialLoad, previousNotificationsEnabled, updateNotificationSettings])
 
-  const handleOpenFolder = async (folderType: 'database' | 'models' | 'recordings') => {
+  const handleOpenFolder = async (folderType: 'database' | 'models' | 'recordings' | 'logs') => {
     try {
       switch (folderType) {
         case 'database':
@@ -121,6 +128,9 @@ export function PreferenceSettings() {
           break;
         case 'recordings':
           await invoke('open_recordings_folder');
+          break;
+        case 'logs':
+          await invoke('open_log_folder');
           break;
       }
 
@@ -209,6 +219,24 @@ export function PreferenceSettings() {
             >
               <FolderOpen className="w-4 h-4" />
               Abrir Pasta
+            </button>
+          </div>
+
+          {/* Diagnostic Logs Location */}
+          <div className="p-4 border rounded-lg bg-gray-50">
+            <div className="font-medium mb-2">Logs de Diagnóstico</div>
+            <div className="text-sm text-gray-600 mb-3 break-all font-mono text-xs">
+              {logDirectory || 'Carregando...'}
+            </div>
+            <p className="text-xs text-gray-600 mb-3">
+              Se o aplicativo fechar ou apresentar erros, envie os arquivos desta pasta para o suporte.
+            </p>
+            <button
+              onClick={() => handleOpenFolder('logs')}
+              className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
+            >
+              <FolderOpen className="w-4 h-4" />
+              Abrir Pasta de Logs
             </button>
           </div>
         </div>

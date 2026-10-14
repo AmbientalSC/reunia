@@ -44,6 +44,7 @@ pub mod config;
 pub mod console_utils;
 pub mod database;
 pub mod groq;
+pub mod logging;
 pub mod notifications;
 pub mod ollama;
 pub mod onboarding;
@@ -384,6 +385,7 @@ pub fn get_language_preference_internal() -> Option<String> {
 
 pub fn run() {
     log::set_max_level(log::LevelFilter::Info);
+    logging::install_panic_hook();
 
     let mut builder = tauri::Builder::default();
 
@@ -401,6 +403,7 @@ pub fn run() {
     }
 
     builder
+        .plugin(logging::build_plugin())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
@@ -415,6 +418,7 @@ pub fn run() {
             tokio::sync::Mutex::new(None),
         )))
         .setup(|_app| {
+            logging::begin_session(_app.handle());
             log::info!("Application setup complete");
 
             // Initialize system tray
@@ -764,6 +768,10 @@ pub fn run() {
             audio::import::start_import_audio_command,
             audio::import::cancel_import_command,
             audio::import::is_import_in_progress_command,
+            // Diagnostic log commands
+            logging::get_log_directory,
+            logging::open_log_folder,
+            logging::log_frontend_event,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
@@ -797,6 +805,7 @@ pub fn run() {
                         }
                     });
                     log::info!("Application cleanup complete");
+                    logging::end_session();
                 }
                 _ => {}
             }

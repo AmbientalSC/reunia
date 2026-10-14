@@ -79,6 +79,7 @@ pub async fn start_recording_with_meeting_name<R: Runtime>(
         "Starting recording with default devices, meeting: {:?}",
         meeting_name
     );
+    crate::logging::log_memory_snapshot("início da gravação");
 
     let engine_lifecycle_guard = super::common::acquire_engine_lifecycle_lock().await;
 
@@ -301,6 +302,7 @@ pub async fn start_recording_with_meeting_name<R: Runtime>(
     crate::tray::update_tray_menu(&app);
 
     info!("✅ Recording started successfully with async-first approach");
+    crate::logging::log_memory_snapshot("gravação iniciada");
 
     Ok(())
 }
@@ -325,6 +327,7 @@ pub async fn start_recording_with_devices_and_meeting<R: Runtime>(
         "Starting recording with specific devices: mic={:?}, system={:?}, meeting={:?}",
         mic_device_name, system_device_name, meeting_name
     );
+    crate::logging::log_memory_snapshot("início da gravação");
 
     let engine_lifecycle_guard = super::common::acquire_engine_lifecycle_lock().await;
 
@@ -475,6 +478,7 @@ pub async fn start_recording_with_devices_and_meeting<R: Runtime>(
     crate::tray::update_tray_menu(&app);
 
     info!("✅ Recording started with custom devices using async-first approach");
+    crate::logging::log_memory_snapshot("gravação iniciada");
 
     Ok(())
 }

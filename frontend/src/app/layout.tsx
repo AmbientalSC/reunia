@@ -27,6 +27,7 @@ import { RecordingPostProcessingProvider } from '@/contexts/RecordingPostProcess
 import { ImportAudioDialog, ImportDropOverlay } from '@/components/ImportAudio'
 import { ImportDialogProvider } from '@/contexts/ImportDialogContext'
 import { isAudioExtension, getAudioFormatsDisplayList } from '@/constants/audioFormats'
+import { installGlobalErrorLogging } from '@/lib/logger'
 
 
 // Poppins auto-hospedada (next/font/local) — sem dependência de rede no build.
@@ -129,6 +130,9 @@ export default function RootLayout({
   useEffect(() => {
     checkOnboardingStatus()
   }, [checkOnboardingStatus])
+
+  // Envia erros não tratados do frontend para o arquivo de log do app
+  useEffect(() => installGlobalErrorLogging(), [])
 
   useEffect(() => {
     // Fired by AuthContext once enterprise auto-setup (Groq-managed profiles)
