@@ -259,6 +259,10 @@ impl WhisperEngine {
     }
     
     pub async fn load_model(&self, model_name: &str) -> Result<()> {
+        // O whisper.cpp é compilado com AVX2; em CPU sem isso o processo morre por instrução ilegal
+        crate::cpu_support::ensure_local_engine_supported(crate::cpu_support::LocalEngine::Whisper)
+            .map_err(|message| anyhow!(message))?;
+
         let models = self.available_models.read().await;
         let model_info = models.get(model_name)
             .ok_or_else(|| anyhow!("Model {} not found", model_name))?;

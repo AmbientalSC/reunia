@@ -114,16 +114,24 @@ fn log_system_info(app_version: &str, log_dir: &Path) {
         .unwrap_or_else(|| "desconhecida".to_string());
 
     log::info!(
-        "ReunIA {} iniciado | SO: {} | CPU: {} ({} threads{}) | RAM: {} MB total, {} MB livre | logs: {}",
+        "ReunIA {} iniciado | SO: {} | CPU: {} ({} threads{}) | motores locais: {} | RAM: {} MB total, {} MB livre | logs: {}",
         app_version,
         System::long_os_version().unwrap_or_else(|| "desconhecido".to_string()),
         cpu,
         system.cpus().len(),
         cpu_features(),
+        local_engines_status(),
         system.total_memory() / BYTES_PER_MB,
         system.available_memory() / BYTES_PER_MB,
         log_dir.display()
     );
+}
+
+fn local_engines_status() -> String {
+    match crate::cpu_support::missing_cpu_features() {
+        [] => "compatível".to_string(),
+        missing => format!("INCOMPATÍVEL (faltam {})", missing.join(", ")),
+    }
 }
 
 /// Registra memória livre da máquina e uso do processo. Falta de RAM (modelos de transcrição

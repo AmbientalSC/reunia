@@ -277,6 +277,12 @@ impl SidecarManager {
 
     /// Spawn the sidecar process
     async fn spawn(&self, model_path: PathBuf) -> Result<()> {
+        // O llama.cpp do helper é compilado com AVX2; em CPU sem isso ele morre por instrução ilegal
+        crate::cpu_support::ensure_local_engine_supported(
+            crate::cpu_support::LocalEngine::BuiltInSummary,
+        )
+        .map_err(|message| anyhow!(message))?;
+
         // Shutdown existing process if running
         self.shutdown().await?;
 

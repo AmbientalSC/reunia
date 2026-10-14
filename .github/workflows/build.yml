@@ -111,7 +111,9 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: ". -> target"
-          key: ${{ inputs.platform }}-${{ inputs.target }}-vulkan-v2
+          # v3: invalida o ggml/whisper.cpp compilado com AVX-512 detectado no runner (v0.4.6),
+          # que derrubava o app em PCs sem AVX-512. Subir o número força recompilar tudo.
+          key: ${{ inputs.platform }}-${{ inputs.target }}-vulkan-v3
 
       - name: install dependencies (ubuntu 24.04)
         if: contains(inputs.platform, 'ubuntu-24.04')
@@ -578,6 +580,35 @@ jobs:
           releaseName: ${{ inputs.release-id && format('v{0}', steps.get-version.outputs.version) || '' }}
           releaseId: ${{ inputs.release-id }}
           args: ${{ inputs.build-args }} ${{ steps.build-features.outputs.features }}
+
+      - name: Verify portable CPU baseline (Windows)
+        if: contains(inputs.platform, 'windows')
+        shell: pwsh
+        run: |
+          # whisper.cpp/ggml precisam de baseline fixo (AVX2), nunca da CPU do runner (AVX-512),
+          # senão o app cai com ILLEGAL_INSTRUCTION em PCs mais simples (visto na v0.4.6).
+          # Configurado em frontend/src-tauri/cmake/ggml-portable.cmake.
+          $caches = Get-ChildItem -Path target -Recurse -Filter CMakeCache.txt -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -like '*whisper-rs-sys*' }
+          if (-not $caches) {
+            Write-Host "::warning::CMakeCache.txt do whisper-rs-sys não encontrado; baseline de CPU não verificado"
+            exit 0
+          }
+
+          $failed = $false
+          foreach ($cache in $caches) {
+            $content = Get-Content $cache.FullName
+            foreach ($check in @(@('GGML_NATIVE', 'OFF'), @('GGML_AVX512', 'OFF'), @('GGML_AVX2', 'ON'))) {
+              $name, $expected = $check
+              $line = $content | Where-Object { $_ -match "^${name}:BOOL=" } | Select-Object -First 1
+              Write-Host "$($cache.FullName): $line"
+              if ($line -notmatch "=${expected}$") {
+                Write-Host "::error::${name} deveria ser ${expected} em $($cache.FullName) (encontrado: '$line')"
+                $failed = $true
+              }
+            }
+          }
+          if ($failed) { exit 1 }
 
       - name: Upload artifacts (macOS)
         if: inputs.upload-artifacts && contains(inputs.platform, 'macos')

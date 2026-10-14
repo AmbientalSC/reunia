@@ -65,6 +65,15 @@ pub struct TranscriptionStatus {
 // RECORDING COMMANDS
 // ============================================================================
 
+/// Mensagem para o usuário quando a validação do motor de transcrição falha antes de gravar.
+fn validation_user_message(validation_error: &str) -> String {
+    if crate::cpu_support::is_incompatibility_error(validation_error) {
+        validation_error.to_string()
+    } else {
+        "A gravação não pode ser iniciada: o modelo de transcrição ainda está sendo baixado. Aguarde a conclusão do download.".to_string()
+    }
+}
+
 /// Start recording with default devices
 pub async fn start_recording<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
     start_recording_with_meeting_name(app, None).await
@@ -99,7 +108,7 @@ pub async fn start_recording_with_meeting_name<R: Runtime>(
         // (download progress is already shown in top-right toast)
         let _ = app.emit("transcription-error", serde_json::json!({
             "error": validation_error,
-            "userMessage": "A gravação não pode ser iniciada: o modelo de transcrição ainda está sendo baixado. Aguarde a conclusão do download.",
+            "userMessage": validation_user_message(&validation_error),
             "actionable": false
         }));
 
@@ -347,7 +356,7 @@ pub async fn start_recording_with_devices_and_meeting<R: Runtime>(
         // (download progress is already shown in top-right toast)
         let _ = app.emit("transcription-error", serde_json::json!({
             "error": validation_error,
-            "userMessage": "A gravação não pode ser iniciada: o modelo de transcrição ainda está sendo baixado. Aguarde a conclusão do download.",
+            "userMessage": validation_user_message(&validation_error),
             "actionable": false
         }));
 

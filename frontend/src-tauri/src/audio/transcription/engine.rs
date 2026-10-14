@@ -120,6 +120,10 @@ pub async fn validate_transcription_model_ready<R: Runtime>(app: &AppHandle<R>) 
     // Validate based on provider
     match config.provider.as_str() {
         "localWhisper" => {
+            crate::cpu_support::ensure_local_engine_supported(
+                crate::cpu_support::LocalEngine::Whisper,
+            )?;
+
             info!("🔍 Validating Whisper model...");
             // Ensure whisper engine is initialized first
             if let Err(init_error) = crate::whisper_engine::commands::whisper_init().await {
