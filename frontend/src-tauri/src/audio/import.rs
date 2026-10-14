@@ -268,6 +268,9 @@ pub async fn start_import<R: Runtime>(
     // Reset cancellation flag
     IMPORT_CANCELLED.store(false, Ordering::SeqCst);
 
+    // Sem escolha explícita da UI, usa o provedor/modelo salvos em Configurações > Transcrição
+    let (provider, model) = resolve_transcription_selection(&app, provider, model).await;
+
     let use_parakeet = provider.as_deref() == Some("parakeet");
     let use_groq = provider.as_deref() == Some("groq");
     let result = run_import(
@@ -892,20 +895,80 @@ async fn get_or_init_parakeet<R: Runtime>(
     }
 }
 
-/// Get the configured model from database
-async fn get_configured_model<R: Runtime>(app: &AppHandle<R>, provider_type: &str) -> Result<String> {
+/// Provedor e modelo salvos em Configurações > Transcrição (tabela `transcript_settings`).
+async fn fetch_saved_transcript_settings<R: Runtime>(
+    app: &AppHandle<R>,
+) -> Result<Option<(String, String)>> {
     let app_state = app
         .try_state::<AppState>()
         .ok_or_else(|| anyhow!("Estado do aplicativo indisponível"))?;
 
-    let result: Option<(String, String)> = sqlx::query_as(
-        "SELECT provider, model FROM transcript_settings WHERE id = '1'",
-    )
-    .fetch_optional(app_state.db_manager.pool())
-    .await
-    .map_err(|e| anyhow!("Falha ao consultar a configuração: {}", e))?;
+    sqlx::query_as("SELECT provider, model FROM transcript_settings WHERE id = '1'")
+        .fetch_optional(app_state.db_manager.pool())
+        .await
+        .map_err(|e| anyhow!("Falha ao consultar a configuração: {}", e))
+}
 
-    match result {
+/// Converte o provedor salvo nas configurações para o formato usado pelo import
+/// ("localWhisper" vira "whisper"). `None` para provedores que o import não suporta.
+fn selection_from_saved_settings(provider: &str, model: &str) -> Option<(String, Option<String>)> {
+    let provider = match provider {
+        "localWhisper" | "whisper" => "whisper",
+        "parakeet" => "parakeet",
+        "groq" => "groq",
+        _ => return None,
+    };
+    let model = model.trim();
+
+    Some((
+        provider.to_string(),
+        (!model.is_empty()).then(|| model.to_string()),
+    ))
+}
+
+/// Define provedor e modelo do import. A UI normalmente envia a escolha do usuário (que já vem
+/// pré-selecionada com o modelo configurado); quando não envia nada — por exemplo, a lista de
+/// modelos veio vazia porque a chave do Groq é a do perfil e nunca chega ao webview — usa o que
+/// está salvo em Configurações > Transcrição, em vez de cair no Whisper local.
+async fn resolve_transcription_selection<R: Runtime>(
+    app: &AppHandle<R>,
+    provider: Option<String>,
+    model: Option<String>,
+) -> (Option<String>, Option<String>) {
+    if provider.as_deref().is_some_and(|p| !p.trim().is_empty()) {
+        return (provider, model);
+    }
+
+    match fetch_saved_transcript_settings(app).await {
+        Ok(Some((saved_provider, saved_model))) => {
+            match selection_from_saved_settings(&saved_provider, &saved_model) {
+                Some((resolved_provider, resolved_model)) => {
+                    info!(
+                        "Import sem modelo escolhido; usando o configurado: provider={}, model={:?}",
+                        resolved_provider, resolved_model
+                    );
+                    (Some(resolved_provider), resolved_model)
+                }
+                None => {
+                    warn!(
+                        "Provedor '{}' das configurações não é suportado no import; usando o padrão",
+                        saved_provider
+                    );
+                    (provider, model)
+                }
+            }
+        }
+        Ok(None) => (provider, model),
+        Err(e) => {
+            warn!("Não foi possível ler a configuração de transcrição: {}", e);
+            (provider, model)
+        }
+    }
+}
+
+/// Get the configured model from database
+async fn get_configured_model<R: Runtime>(app: &AppHandle<R>, provider_type: &str) -> Result<String> {
+    match fetch_saved_transcript_settings(app).await? {
         Some((provider, model)) => {
             if (provider_type == "whisper" && (provider == "localWhisper" || provider == "whisper"))
                 || (provider_type == "parakeet" && provider == "parakeet")
@@ -1060,6 +1123,46 @@ pub async fn is_import_in_progress_command() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn saved_groq_settings_become_groq_selection() {
+        assert_eq!(
+            selection_from_saved_settings("groq", "whisper-large-v3"),
+            Some(("groq".to_string(), Some("whisper-large-v3".to_string())))
+        );
+    }
+
+    #[test]
+    fn saved_local_whisper_maps_to_whisper_provider() {
+        assert_eq!(
+            selection_from_saved_settings("localWhisper", "large-v3"),
+            Some(("whisper".to_string(), Some("large-v3".to_string())))
+        );
+    }
+
+    #[test]
+    fn saved_parakeet_settings_become_parakeet_selection() {
+        assert_eq!(
+            selection_from_saved_settings("parakeet", "parakeet-tdt-0.6b-v3-int8"),
+            Some((
+                "parakeet".to_string(),
+                Some("parakeet-tdt-0.6b-v3-int8".to_string())
+            ))
+        );
+    }
+
+    #[test]
+    fn blank_saved_model_is_left_for_the_engine_default() {
+        assert_eq!(
+            selection_from_saved_settings("groq", "  "),
+            Some(("groq".to_string(), None))
+        );
+    }
+
+    #[test]
+    fn unsupported_saved_provider_has_no_selection() {
+        assert_eq!(selection_from_saved_settings("deepgram", "nova-2"), None);
+    }
 
     #[test]
     fn test_audio_extensions() {

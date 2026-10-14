@@ -1,22 +1,19 @@
 import { useState, useCallback, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  buildGroqModelOptions,
+  pickDefaultModelKey,
+  type ModelOption,
+  type TranscriptModelConfig,
+} from '@/lib/transcriptionModelSelection';
+
+export type { ModelOption };
 
 export interface RawModelInfo {
   name: string;
   size_mb: number;
   status: 'Available' | 'Missing' | { Downloading: { progress: number } } | { Error: string };
-}
-
-export interface ModelOption {
-  provider: 'whisper' | 'parakeet' | 'groq';
-  name: string;
-  displayName: string;
-  size_mb: number;
-}
-
-interface TranscriptModelConfig {
-  provider?: string;
-  model?: string;
 }
 
 /**
@@ -29,6 +26,9 @@ interface TranscriptModelConfig {
  * @returns Object containing available models, selected model key, loading state, and fetch function
  */
 export function useTranscriptionModels(transcriptModelConfig: TranscriptModelConfig | undefined) {
+  // Perfis com chave Groq gerenciada: a chave vem do perfil (Firestore) e nunca chega ao webview,
+  // então `api_get_transcript_api_key` volta vazio mesmo com o Groq pronto para uso.
+  const { hasManagedGroqKey } = useAuth();
   const [availableModels, setAvailableModels] = useState<ModelOption[]>([]);
   const [selectedModelKey, setSelectedModelKey] = useState<string>('');
   const [loadingModels, setLoadingModels] = useState(false);
@@ -77,15 +77,11 @@ export function useTranscriptionModels(transcriptModelConfig: TranscriptModelCon
       console.error('Failed to fetch Parakeet models:', err);
     }
 
-    // Add Groq Whisper cloud models (only if an API key is configured)
+    // Add Groq Whisper cloud models (managed profile key or a locally saved API key)
     try {
-      const groqApiKey = await invoke<string>('api_get_transcript_api_key', { provider: 'groq' });
-      if (groqApiKey && groqApiKey.trim()) {
-        const groqModels: ModelOption[] = [
-          { provider: 'groq', name: 'whisper-large-v3-turbo', displayName: '☁️ Groq: whisper-large-v3-turbo', size_mb: 0 },
-          { provider: 'groq', name: 'whisper-large-v3', displayName: '☁️ Groq: whisper-large-v3', size_mb: 0 },
-        ];
-        allModels.push(...groqModels);
+      const hasGroqKey = hasManagedGroqKey || await hasLocalGroqKey();
+      if (hasGroqKey) {
+        allModels.push(...buildGroqModelOptions(transcriptModelConfig));
       }
     } catch (err) {
       console.error('Failed to fetch Groq transcription models:', err);
@@ -93,32 +89,17 @@ export function useTranscriptionModels(transcriptModelConfig: TranscriptModelCon
 
     setAvailableModels(allModels);
 
-    // Set default model based on user's saved configuration
-    const configuredProvider = transcriptModelConfig?.provider || '';
-    const configuredModel = transcriptModelConfig?.model || '';
-
-    // Try to match the configured model
-    // Note: 'localWhisper' in config maps to 'whisper' provider in model list
-    const configuredMatch = allModels.find(
-      (m) =>
-        (configuredProvider === 'localWhisper' && m.provider === 'whisper' && m.name === configuredModel) ||
-        (configuredProvider === 'parakeet' && m.provider === 'parakeet' && m.name === configuredModel) ||
-        (configuredProvider === 'groq' && m.provider === 'groq' && m.name === configuredModel)
-    );
-
-    // Only set default model if user hasn't manually selected one
+    // Pre-select the model saved in Settings > Transcription (first available as fallback),
+    // unless the user has already picked one manually
     if (!userSelectedRef.current) {
-      if (configuredMatch) {
-        // Use the configured model if available
-        setSelectedModelKey(`${configuredMatch.provider}:${configuredMatch.name}`);
-      } else if (allModels.length > 0) {
-        // Fall back to first available model
-        setSelectedModelKey(`${allModels[0].provider}:${allModels[0].name}`);
+      const defaultKey = pickDefaultModelKey(allModels, transcriptModelConfig);
+      if (defaultKey) {
+        setSelectedModelKey(defaultKey);
       }
     }
 
     setLoadingModels(false);
-  }, [transcriptModelConfig]);
+  }, [transcriptModelConfig, hasManagedGroqKey]);
 
   // Reset user selection tracking (call when dialog opens fresh)
   const resetSelection = useCallback(() => {
@@ -133,4 +114,9 @@ export function useTranscriptionModels(transcriptModelConfig: TranscriptModelCon
     fetchModels,
     resetSelection,
   };
+}
+
+async function hasLocalGroqKey(): Promise<boolean> {
+  const groqApiKey = await invoke<string>('api_get_transcript_api_key', { provider: 'groq' });
+  return Boolean(groqApiKey && groqApiKey.trim());
 }
