@@ -3,8 +3,8 @@
   "description": "Reunião semanal ou quinzenal de status do projeto, focada em marcos e riscos.",
   "sections": [
     {
-      "title": "Data e Hora da Reunião",
-      "instruction": "Data, horário de início/término, nome do facilitador",
+      "title": "Horário e Facilitador",
+      "instruction": "Horário de início/término e nome do facilitador (a data da reunião já é informada no topo do documento)",
       "format": "string"
     },
     {

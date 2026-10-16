@@ -8,7 +8,6 @@ This directory contains template definitions for meeting summary generation.
 Time-boxed daily updates template designed for engineering/product teams.
 
 **Sections:**
-- Date
 - Attendees
 - Yesterday (completed work)
 - Today (planned work)
@@ -45,13 +44,31 @@ Each template JSON file follows this schema:
 
 ## Custom Templates
 
-Users can add custom templates to the application data directory:
+Users create, edit, duplicate and delete custom templates in the app
+(**Configurações > Resumo > Modelos de Resumo**, or **Modelo > Gerenciar modelos** on
+the meeting screen). Built-in templates are read-only but can be duplicated.
+
+Each custom template is saved as `<id>.json` in the application data directory
+(ids created by the app look like `custom_ata_de_diretoria`):
 
 - **macOS**: `~/Library/Application Support/Meetily/templates/`
 - **Windows**: `%APPDATA%\Meetily\templates\`
 - **Linux**: `~/.config/Meetily/templates/`
 
-Custom templates override built-in templates with the same filename.
+Files dropped there by hand also work and override built-in templates with the same
+filename. Template ids (the file name without `.json`) may only contain letters, digits,
+spaces and `_ - . ( ) @ +`; other files are ignored.
+
+Limits enforced when saving from the app: name 80 characters, description 300, up to 30
+sections, section title 100, instruction 2000, item format 1000, and 20,000 characters of
+section text combined. Files loaded from disk are only checked structurally, so existing
+hand-written templates keep working even if they exceed these limits.
+
+## Meeting Date
+
+Every generated summary starts with a `**Data:** 16 de outubro de 2026` line right below the
+title, added by the app after generation (see `summary/meeting_date.rs`). Templates do not need
+a "Date" section for this.
 
 ## Template Fields
 

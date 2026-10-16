@@ -189,6 +189,7 @@ export default function PageContent({
           onLoadMore={onLoadMore}
           // Retranscription props
           meetingId={meeting.id}
+          meetingDate={meeting.created_at}
           meetingFolderPath={meeting.folder_path}
           onRefetchTranscripts={onRefetchTranscripts}
         />
@@ -224,6 +225,7 @@ export default function PageContent({
           availableTemplates={templates.availableTemplates}
           selectedTemplate={templates.selectedTemplate}
           onTemplateSelect={templates.handleTemplateSelection}
+          onTemplatesChange={templates.handleTemplatesChange}
           isModelConfigLoading={false}
           onOpenModelSettings={handleRegisterModalOpen}
         />

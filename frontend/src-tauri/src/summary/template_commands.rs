@@ -1,6 +1,9 @@
-use crate::summary::templates;
+use crate::state::AppState;
+use crate::summary::template_assistant::{self, SectionContext};
+use crate::summary::templates::{self, Template, TemplateSection};
+use crate::summary::visual::{self, VisualLlmConfig};
 use serde::{Deserialize, Serialize};
-use tauri::Runtime;
+use tauri::{Manager, Runtime};
 use tracing::{info, warn};
 
 /// Template metadata for UI display
@@ -14,6 +17,19 @@ pub struct TemplateInfo {
 
     /// Brief description of the template's purpose
     pub description: String,
+
+    /// True for user-created templates, which can be edited and deleted
+    pub is_custom: bool,
+}
+
+/// Complete template content, used to populate the template editor
+#[derive(Debug, Serialize)]
+pub struct TemplateFull {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub sections: Vec<TemplateSection>,
+    pub is_custom: bool,
 }
 
 /// Detailed template structure for preview/debugging
@@ -50,6 +66,7 @@ pub async fn api_list_templates<R: Runtime>(
     let template_infos: Vec<TemplateInfo> = templates
         .into_iter()
         .map(|(id, name, description)| TemplateInfo {
+            is_custom: templates::is_custom_template(&id),
             id,
             name,
             description,
@@ -93,6 +110,169 @@ pub async fn api_get_template_details<R: Runtime>(
     info!("Retrieved template details for '{}'", details.name);
 
     Ok(details)
+}
+
+/// Gets the complete content of a template (all sections), for editing or duplicating
+///
+/// # Arguments
+/// * `template_id` - Template identifier
+#[tauri::command]
+pub async fn api_get_template(template_id: String) -> Result<TemplateFull, String> {
+    info!("api_get_template called for template_id: {:?}", template_id);
+
+    let template = templates::get_template(&template_id)?;
+
+    Ok(TemplateFull {
+        is_custom: templates::is_custom_template(&template_id),
+        id: template_id,
+        name: template.name,
+        description: template.description,
+        sections: template.sections,
+    })
+}
+
+/// Creates or updates a user template
+///
+/// # Arguments
+/// * `template_id` - `None` creates a new template (id generated from its name);
+///   `Some(id)` updates the existing custom template with that id
+/// * `template` - Template content; validated before anything is written
+///
+/// # Returns
+/// TemplateInfo of the saved template
+#[tauri::command]
+pub async fn api_save_custom_template(
+    template_id: Option<String>,
+    template: Template,
+) -> Result<TemplateInfo, String> {
+    // The name is not validated yet: log it escaped and truncated.
+    info!(
+        "api_save_custom_template called (template_id: {:?}, name: {:?})",
+        template_id,
+        template.name.chars().take(80).collect::<String>()
+    );
+
+    let id = templates::save_custom_template(template_id.as_deref(), &template)
+        .map_err(|e| {
+            warn!("Failed to save custom template: {}", e);
+            e
+        })?;
+
+    let saved = templates::get_template(&id)?;
+
+    Ok(TemplateInfo {
+        id,
+        name: saved.name,
+        description: saved.description,
+        is_custom: true,
+    })
+}
+
+/// Deletes a user template. Built-in templates cannot be deleted.
+///
+/// # Arguments
+/// * `template_id` - Identifier of the custom template to delete
+#[tauri::command]
+pub async fn api_delete_custom_template(template_id: String) -> Result<(), String> {
+    info!("api_delete_custom_template called for template_id: {:?}", template_id);
+
+    templates::delete_custom_template(&template_id).map_err(|e| {
+        warn!("Failed to delete custom template {:?}: {}", template_id, e);
+        e
+    })
+}
+
+/// Resolves the user's configured summary model (API keys, endpoints) for the
+/// template assistant, the same way the other one-shot LLM commands do.
+async fn resolve_assistant_config<R: Runtime>(
+    app: &tauri::AppHandle<R>,
+    state: &tauri::State<'_, AppState>,
+    model: &str,
+    model_name: &str,
+) -> Result<VisualLlmConfig, String> {
+    if model.trim().is_empty() || model_name.trim().is_empty() {
+        return Err(
+            "Nenhum modelo de IA configurado. Configure um em Configurações > Resumo.".to_string(),
+        );
+    }
+
+    let session = state.require_auth()?;
+    visual::resolve_visual_llm_config(
+        state.db_manager.pool(),
+        model,
+        model_name,
+        app.path().app_data_dir().ok(),
+        session.groq_api_key,
+    )
+    .await
+}
+
+/// Asks the AI to draft a whole template from a free-text description
+///
+/// # Arguments
+/// * `description` - What the user wants (e.g. "ata de reunião de condomínio")
+/// * `model` / `model_name` - Provider and model configured for summaries
+///
+/// # Returns
+/// A validated template; nothing is saved until the user saves the editor form
+#[tauri::command]
+pub async fn api_ai_generate_template<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    description: String,
+    model: String,
+    model_name: String,
+) -> Result<Template, String> {
+    info!("api_ai_generate_template called (provider: {:?})", model);
+
+    let config = resolve_assistant_config(&app, &state, &model, &model_name).await?;
+    template_assistant::generate_template(&config, &description)
+        .await
+        .map_err(|e| {
+            warn!("AI template generation failed: {}", e);
+            e
+        })
+}
+
+/// Asks the AI to rewrite the instruction ("prompt") of one template section
+///
+/// # Arguments
+/// * `template_name` / `template_description` - Context from the editor form (may be empty)
+/// * `section_title` / `section_format` / `instruction` - The section being improved
+/// * `model` / `model_name` - Provider and model configured for summaries
+///
+/// # Returns
+/// The suggested single-line instruction
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+pub async fn api_ai_improve_instruction<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    template_name: String,
+    template_description: String,
+    section_title: String,
+    section_format: String,
+    instruction: String,
+    model: String,
+    model_name: String,
+) -> Result<String, String> {
+    info!("api_ai_improve_instruction called (provider: {:?})", model);
+
+    let config = resolve_assistant_config(&app, &state, &model, &model_name).await?;
+    let context = SectionContext {
+        template_name: &template_name,
+        template_description: &template_description,
+        section_title: &section_title,
+        section_format: &section_format,
+        instruction: &instruction,
+    };
+
+    template_assistant::improve_instruction(&config, &context)
+        .await
+        .map_err(|e| {
+            warn!("AI instruction improvement failed: {}", e);
+            e
+        })
 }
 
 /// Validates a custom template JSON string

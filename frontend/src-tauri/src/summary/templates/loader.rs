@@ -1,6 +1,7 @@
 use super::defaults;
+use super::store::is_safe_template_id;
 use super::types::Template;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::{debug, info, warn};
 use once_cell::sync::Lazy;
 use std::sync::RwLock;
@@ -22,7 +23,7 @@ pub fn set_bundled_templates_dir(path: PathBuf) {
 /// - macOS: ~/Library/Application Support/Meetily/templates/
 /// - Windows: %APPDATA%\Meetily\templates\
 /// - Linux: ~/.config/Meetily/templates/
-fn get_custom_templates_dir() -> Option<PathBuf> {
+pub(super) fn custom_templates_dir() -> Option<PathBuf> {
     let mut path = dirs::data_dir()?;
     path.push("Meetily");
     path.push("templates");
@@ -37,6 +38,9 @@ fn get_custom_templates_dir() -> Option<PathBuf> {
 /// # Returns
 /// The template JSON content if found, None otherwise
 fn load_bundled_template(template_id: &str) -> Option<String> {
+    if !is_safe_template_id(template_id) {
+        return None;
+    }
     let bundled_dir = BUNDLED_TEMPLATES_DIR.read().ok()?.clone()?;
     let template_path = bundled_dir.join(format!("{}.json", template_id));
 
@@ -62,7 +66,10 @@ fn load_bundled_template(template_id: &str) -> Option<String> {
 /// # Returns
 /// The template JSON content if found, None otherwise
 fn load_custom_template(template_id: &str) -> Option<String> {
-    let custom_dir = get_custom_templates_dir()?;
+    if !is_safe_template_id(template_id) {
+        return None;
+    }
+    let custom_dir = custom_templates_dir()?;
     let template_path = custom_dir.join(format!("{}.json", template_id));
 
     debug!("Checking for custom template at: {:?}", template_path);
@@ -93,7 +100,7 @@ fn load_custom_template(template_id: &str) -> Option<String> {
 /// # Returns
 /// Parsed and validated Template struct
 pub fn get_template(template_id: &str) -> Result<Template, String> {
-    info!("Loading template: {}", template_id);
+    info!("Loading template: {:?}", template_id);
 
     // Try custom template first, then bundled, then built-in
     let json_content = if let Some(custom_content) = load_custom_template(template_id) {
@@ -148,53 +155,49 @@ pub fn list_template_ids() -> Vec<String> {
     // Add bundled templates if directory is set
     if let Ok(bundled_dir_lock) = BUNDLED_TEMPLATES_DIR.read() {
         if let Some(bundled_dir) = bundled_dir_lock.as_ref() {
-            if bundled_dir.exists() {
-                match std::fs::read_dir(bundled_dir) {
-                    Ok(entries) => {
-                        for entry in entries.flatten() {
-                            if let Some(filename) = entry.file_name().to_str() {
-                                if filename.ends_with(".json") {
-                                    let id = filename.trim_end_matches(".json").to_string();
-                                    if !ids.contains(&id) {
-                                        ids.push(id);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        warn!("Failed to read bundled templates directory: {}", e);
-                    }
-                }
-            }
+            push_json_template_ids(bundled_dir, &mut ids);
         }
     }
 
     // Add custom templates if directory exists
-    if let Some(custom_dir) = get_custom_templates_dir() {
-        if custom_dir.exists() {
-            match std::fs::read_dir(&custom_dir) {
-                Ok(entries) => {
-                    for entry in entries.flatten() {
-                        if let Some(filename) = entry.file_name().to_str() {
-                            if filename.ends_with(".json") {
-                                let id = filename.trim_end_matches(".json").to_string();
-                                if !ids.contains(&id) {
-                                    ids.push(id);
-                                }
-                            }
-                        }
-                    }
-                }
-                Err(e) => {
-                    warn!("Failed to read custom templates directory: {}", e);
-                }
-            }
-        }
+    if let Some(custom_dir) = custom_templates_dir() {
+        push_json_template_ids(&custom_dir, &mut ids);
     }
 
     ids.sort();
     ids
+}
+
+/// Appends the ids of every `<id>.json` file in `dir` that is not listed yet.
+///
+/// Files whose name is not a safe template id are skipped: `get_template`
+/// refuses to load them, so listing them would only produce dead entries.
+fn push_json_template_ids(dir: &Path, ids: &mut Vec<String>) {
+    if !dir.exists() {
+        return;
+    }
+
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(e) => {
+            warn!("Failed to read templates directory {:?}: {}", dir, e);
+            return;
+        }
+    };
+
+    for entry in entries.flatten() {
+        let file_name = entry.file_name();
+        let Some(id) = file_name
+            .to_str()
+            .and_then(|name| name.strip_suffix(".json"))
+        else {
+            continue;
+        };
+
+        if is_safe_template_id(id) && !ids.iter().any(|existing| existing == id) {
+            ids.push(id.to_string());
+        }
+    }
 }
 
 /// List all available templates with their metadata
@@ -235,6 +238,13 @@ mod tests {
     fn test_get_nonexistent_template() {
         let result = get_template("nonexistent_template");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_template_rejects_path_traversal_ids() {
+        for id in ["../Cargo", "..\\Cargo", "a/b", ""] {
+            assert!(get_template(id).is_err(), "'{id}' should not load");
+        }
     }
 
     #[test]

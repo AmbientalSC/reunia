@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Summary, Block } from '@/types';
 import { Section } from './Section';
 import { EditableTitle } from '../EditableTitle';
+import { formatMeetingDate } from '@/lib/meeting-date';
 import { ExclamationTriangleIcon, CheckCircleIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline';
 
 interface Props {
@@ -559,7 +560,7 @@ export const AISummary = ({ summary, status, error, onSummaryChange, onRegenerat
 
   const convertToMarkdown = () => {
     let markdown = `# Resumo gerado por IA da reunião: ${meeting?.id || 'Desconhecida'} - ${meeting?.title || 'Reunião sem título'}\n\n`;
-    markdown += `## Data: ${meeting?.created_at ? new Date(meeting.created_at).toLocaleDateString() : new Date().toLocaleDateString()}\n\n`;
+    markdown += `## Data: ${formatMeetingDate(meeting?.created_at)}\n\n`;
     
     Object.entries(currentSummary).forEach(([key, section]) => {
       if (key === 'title') {

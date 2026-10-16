@@ -3,6 +3,7 @@ use crate::database::repositories::{
 };
 use crate::summary::llm_client::LLMProvider;
 use crate::summary::language_detection::detect_summary_language;
+use crate::summary::meeting_date::insert_meeting_date;
 use crate::summary::metadata::read_detected_summary_language_from_metadata;
 use crate::summary::processor::{
     extract_meeting_name_from_markdown, generate_meeting_summary, language_name_from_code,
@@ -10,6 +11,7 @@ use crate::summary::processor::{
 use crate::summary::templates::{self, Template};
 use crate::ollama::metadata::ModelMetadataCache;
 use crate::state::AppState;
+use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::collections::HashMap;
@@ -594,8 +596,13 @@ impl SummaryService {
                     }
                 }
 
+                // The date is stamped on the stored summary (and so on the visual summary
+                // input, which is read back from it on retry); the English cache stays free of it.
+                let meeting_date = Self::resolve_meeting_date(&pool, &meeting_id).await;
+                let dated_markdown = insert_meeting_date(&final_markdown, &meeting_date);
+
                 let result_json = build_summary_result_json(
-                    &final_markdown,
+                    &dated_markdown,
                     &english_markdown,
                     cache_source,
                     summary_language.as_deref(),
@@ -651,7 +658,7 @@ impl SummaryService {
                         _app.clone(),
                         pool.clone(),
                         meeting_id.clone(),
-                        strip_title_if_present(&final_markdown),
+                        strip_title_if_present(&dated_markdown),
                         visual_title,
                         visual_language,
                         visual_config,
@@ -669,6 +676,24 @@ impl SummaryService {
                 } else {
                     Self::update_process_failed(&pool, &meeting_id, &e).await;
                 }
+            }
+        }
+    }
+
+    /// Date the meeting took place, in the user's local time zone.
+    ///
+    /// Falls back to the current date when the meeting row cannot be read
+    /// (e.g. a summary generated for a meeting that was not saved yet).
+    async fn resolve_meeting_date(pool: &SqlitePool, meeting_id: &str) -> DateTime<Local> {
+        match MeetingsRepository::get_meeting_metadata(pool, meeting_id).await {
+            Ok(Some(meeting)) => meeting.created_at.0.with_timezone(&Local),
+            Ok(None) => Local::now(),
+            Err(e) => {
+                warn!(
+                    "Failed to read meeting date for {}: {}. Using today's date.",
+                    meeting_id, e
+                );
+                Local::now()
             }
         }
     }
@@ -1045,6 +1070,34 @@ mod tests {
         assert_eq!(
             result["english_cache"]["markdown"],
             "# English Title\n## Decisions\nDone"
+        );
+    }
+
+    #[test]
+    fn test_dated_summary_starts_with_date_and_keeps_english_cache_clean() {
+        use chrono::TimeZone;
+
+        let meeting_date = chrono::Utc.with_ymd_and_hms(2026, 10, 16, 12, 0, 0).unwrap();
+        let dated = insert_meeting_date("# Título\n## Decisões\nFeito", &meeting_date);
+
+        let result = build_summary_result_json(
+            &dated,
+            "# Title\n## Decisions\nDone",
+            sample_cache_source(),
+            None,
+        );
+
+        assert_eq!(
+            result["markdown"],
+            "**Data:** 16 de outubro de 2026\n\n## Decisões\nFeito"
+        );
+        assert_eq!(
+            result["english_cache"]["markdown"],
+            "# Title\n## Decisions\nDone"
+        );
+        assert_eq!(
+            extract_meeting_name_from_markdown(&dated).as_deref(),
+            Some("Título")
         );
     }
 

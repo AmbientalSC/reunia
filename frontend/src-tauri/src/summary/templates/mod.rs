@@ -30,15 +30,18 @@
 //!
 //! # Custom Templates
 //!
-//! Users can add custom templates to:
+//! Users create, edit and delete custom templates from the app UI
+//! (see `store` and `template_commands`). They are stored as JSON files in:
 //! - macOS: `~/Library/Application Support/Meetily/templates/`
 //! - Windows: `%APPDATA%\Meetily\templates\`
 //! - Linux: `~/.config/Meetily/templates/`
 //!
-//! Custom templates must follow the JSON schema defined in `types::Template`.
+//! Files dropped there by hand keep working. Custom templates must follow the
+//! JSON schema defined in `types::Template`.
 
 mod defaults;
 mod loader;
+mod store;
 mod types;
 
 // Re-export public API
@@ -46,7 +49,11 @@ pub use loader::{
     get_template, list_template_ids, list_templates, set_bundled_templates_dir,
     validate_and_parse_template,
 };
-pub use types::{Template, TemplateSection};
+pub use store::{delete_custom_template, is_custom_template, save_custom_template};
+pub use types::{
+    Template, TemplateSection, MAX_DESCRIPTION_CHARS, MAX_INSTRUCTION_CHARS, MAX_NAME_CHARS,
+    MAX_SECTIONS,
+};
 
 #[cfg(test)]
 mod tests {

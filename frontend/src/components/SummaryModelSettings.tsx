@@ -5,6 +5,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
 import { ModelConfig, ModelSettingsModal } from '@/components/ModelSettingsModal';
 import { SummaryLanguageSettings } from '@/components/SummaryLanguageSettings';
+import { TemplateManager } from '@/components/templates/TemplateManager';
 import { Switch } from './ui/switch';
 import { useConfig } from '@/contexts/ConfigContext';
 
@@ -135,6 +136,14 @@ export function SummaryModelSettings({ refetchTrigger }: SummaryModelSettingsPro
       </div>
 
       <SummaryLanguageSettings />
+
+      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Modelos de Resumo</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Os modelos definem as seções da ata gerada pela IA. Crie os seus ou adapte os existentes.
+        </p>
+        <TemplateManager />
+      </div>
 
       <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
         <h3 className="text-lg font-semibold mb-4">Configuração do Modelo de Resumo</h3>

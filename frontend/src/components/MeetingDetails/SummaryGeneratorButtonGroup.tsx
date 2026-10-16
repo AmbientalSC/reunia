@@ -4,6 +4,8 @@ import { ModelConfig, ModelSettingsModal } from '@/components/ModelSettingsModal
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogHeader,
   DialogTrigger,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -14,15 +16,18 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Sparkles, Settings, Loader2, FileText, Check, Square } from 'lucide-react';
+import { Sparkles, Settings, Settings2, Loader2, FileText, Check, Square } from 'lucide-react';
 import Analytics from '@/lib/analytics';
 import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
 import { useState, useEffect, useRef, ReactNode } from 'react';
 import { isOllamaNotInstalledError } from '@/lib/utils';
 import { BuiltInModelInfo } from '@/lib/builtin-ai';
+import { TemplateManager } from '@/components/templates/TemplateManager';
+import { TemplateInfo, TemplatesChange } from '@/types/template';
 
 interface SummaryGeneratorButtonGroupProps {
   languageSlot?: ReactNode;
@@ -33,9 +38,10 @@ interface SummaryGeneratorButtonGroupProps {
   onStopGeneration: () => void;
   customPrompt: string;
   summaryStatus: 'idle' | 'processing' | 'summarizing' | 'regenerating' | 'completed' | 'error';
-  availableTemplates: Array<{ id: string, name: string, description: string }>;
+  availableTemplates: TemplateInfo[];
   selectedTemplate: string;
   onTemplateSelect: (templateId: string, templateName: string) => void;
+  onTemplatesChange?: (change: TemplatesChange) => void | Promise<void>;
   hasTranscripts?: boolean;
   hasSummary?: boolean;
   isModelConfigLoading?: boolean;
@@ -53,6 +59,7 @@ export function SummaryGeneratorButtonGroup({
   availableTemplates,
   selectedTemplate,
   onTemplateSelect,
+  onTemplatesChange,
   hasTranscripts = true,
   hasSummary = false,
   isModelConfigLoading = false,
@@ -61,6 +68,7 @@ export function SummaryGeneratorButtonGroup({
 }: SummaryGeneratorButtonGroupProps) {
   const [isCheckingModels, setIsCheckingModels] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
 
   // Expose the function to open the modal via callback registration
   useEffect(() => {
@@ -346,15 +354,48 @@ export function SummaryGeneratorButtonGroup({
                 className="flex items-center justify-between gap-2"
               >
                 <span>{template.name}</span>
-                {selectedTemplate === template.id && (
-                  <Check className="h-4 w-4 text-green-600" />
-                )}
+                <span className="flex items-center gap-2">
+                  {template.is_custom && (
+                    <span className="text-[10px] uppercase tracking-wide text-gray-400">
+                      Personalizado
+                    </span>
+                  )}
+                  {selectedTemplate === template.id && (
+                    <Check className="h-4 w-4 text-green-600" />
+                  )}
+                </span>
               </DropdownMenuItem>
             ))}
 
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={() => {
+                Analytics.trackButtonClick('manage_templates', 'meeting_details');
+                setTemplatesDialogOpen(true);
+              }}
+              className="flex items-center gap-2"
+            >
+              <Settings2 className="h-4 w-4" />
+              <span>Gerenciar modelos…</span>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+
+      <Dialog open={templatesDialogOpen} onOpenChange={setTemplatesDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Modelos de resumo</DialogTitle>
+            <DialogDescription>
+              Crie seus próprios modelos de ata ou ajuste os que você já criou.
+            </DialogDescription>
+          </DialogHeader>
+          <TemplateManager
+            className="max-h-[50vh] overflow-y-auto pr-1"
+            onChange={onTemplatesChange}
+          />
+        </DialogContent>
+      </Dialog>
     </ButtonGroup>
   );
 }

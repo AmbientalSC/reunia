@@ -5,6 +5,7 @@ import { TranscriptView } from '@/components/TranscriptView';
 import { VirtualizedTranscriptView } from '@/components/VirtualizedTranscriptView';
 import { TranscriptButtonGroup } from './TranscriptButtonGroup';
 import { useMemo } from 'react';
+import { formatMeetingDate } from '@/lib/meeting-date';
 
 interface TranscriptPanelProps {
   transcripts: Transcript[];
@@ -26,6 +27,8 @@ interface TranscriptPanelProps {
 
   // Retranscription props
   meetingId?: string;
+  /** Meeting creation timestamp (ISO); shown as the transcript's date. */
+  meetingDate?: string;
   meetingFolderPath?: string | null;
   onRefetchTranscripts?: () => Promise<void>;
 }
@@ -46,6 +49,7 @@ export function TranscriptPanel({
   loadedCount,
   onLoadMore,
   meetingId,
+  meetingDate,
   meetingFolderPath,
   onRefetchTranscripts,
 }: TranscriptPanelProps) {
@@ -76,6 +80,11 @@ export function TranscriptPanel({
           meetingFolderPath={meetingFolderPath}
           onRefetchTranscripts={onRefetchTranscripts}
         />
+        {meetingDate && (
+          <p className="mt-3 text-center text-xs text-gray-500">
+            Transcrição de {formatMeetingDate(meetingDate)}
+          </p>
+        )}
       </div>
 
       {/* Transcript content - use virtualized view for better performance */}

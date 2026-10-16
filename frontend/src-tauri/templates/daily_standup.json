@@ -3,11 +3,6 @@
   "description": "Atualizações diárias com tempo limitado para equipes de engenharia/produto.",
   "sections": [
     {
-      "title": "Data",
-      "instruction": "AAAA-MM-DD",
-      "format": "string"
-    },
-    {
       "title": "Participantes",
       "instruction": "Lista de participantes presentes",
       "format": "list"
