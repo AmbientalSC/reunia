@@ -8,10 +8,11 @@ import { ModelConfig } from '@/components/ModelSettingsModal';
 import { SummaryGeneratorButtonGroup } from './SummaryGeneratorButtonGroup';
 import { SummaryUpdaterButtonGroup } from './SummaryUpdaterButtonGroup';
 import { VisualSummaryPanel } from './VisualSummaryPanel';
+import { MeetingInsightPanel } from './MeetingInsightPanel';
 import Analytics from '@/lib/analytics';
 import { useEffect, useRef, useState, RefObject } from 'react';
 import { toast } from 'sonner';
-import { Languages, ChevronDown, FileText, LayoutDashboard } from 'lucide-react';
+import { Languages, ChevronDown, FileText, LayoutDashboard, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
@@ -105,7 +106,7 @@ export function SummaryPanel({
   const [summaryLang, setSummaryLang] = useState<string | null>(null);
   const [summaryLangStorage, setSummaryLangStorage] = useState<SummaryLanguageStorage>('metadata');
   const [langPickerOpen, setLangPickerOpen] = useState(false);
-  const [activeView, setActiveView] = useState<'resumo' | 'tela'>('resumo');
+  const [activeView, setActiveView] = useState<'resumo' | 'tela' | 'insight'>('resumo');
   const languageLoadVersionRef = useRef(0);
   const activeMeetingIdRef = useRef(meeting.id);
   const languageSaveVersionRef = useRef(0);
@@ -270,7 +271,7 @@ export function SummaryPanel({
         <Tabs
           value={activeView}
           onValueChange={(value) => {
-            const view = value as 'resumo' | 'tela';
+            const view = value as 'resumo' | 'tela' | 'insight';
             if (view === 'tela') {
               Analytics.trackButtonClick('open_visual_summary_tab', 'meeting_details');
             }
@@ -286,11 +287,22 @@ export function SummaryPanel({
               <LayoutDashboard size={15} aria-hidden="true" />
               Tela
             </TabsTrigger>
+            <TabsTrigger value="insight" className="gap-1.5">
+              <Sparkles size={15} aria-hidden="true" />
+              Insight
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
-      {activeView === 'tela' ? (
+      {activeView === 'insight' ? (
+        <MeetingInsightPanel
+          meetingId={meeting.id}
+          transcripts={transcripts}
+          provider={modelConfig.provider}
+          model={modelConfig.model}
+        />
+      ) : activeView === 'tela' ? (
         <VisualSummaryPanel
           meeting={meeting}
           meetingTitle={meetingTitle}

@@ -224,10 +224,11 @@ pub async fn api_detect_transcript_summary_language(
     Ok(detect_summary_language(&transcript_texts))
 }
 
-/// Generates a lightweight, real-time insight from a recent window of the
-/// in-progress transcript. Separate from the post-meeting summary/report
-/// pipeline above: no chunking, no persistence — a single LLM call, result
-/// returned directly to the caller.
+/// Generates a lightweight insight from a window of the transcript: the recent
+/// part of an in-progress recording, or (`completed`) a meeting that already
+/// ended. Separate from the post-meeting summary/report pipeline above: no
+/// chunking and nothing is written here — a single LLM call, result returned
+/// directly to the caller (who saves it through `insight_commands`).
 #[tauri::command]
 pub async fn api_generate_live_insight<R: Runtime>(
     app: AppHandle<R>,
@@ -235,6 +236,7 @@ pub async fn api_generate_live_insight<R: Runtime>(
     text: String,
     model: String,
     model_name: String,
+    completed: Option<bool>,
 ) -> Result<crate::summary::live_insight::LiveInsightData, String> {
     use crate::summary::visual;
     use tauri::Manager;
@@ -270,6 +272,7 @@ pub async fn api_generate_live_insight<R: Runtime>(
         config.app_data_dir.as_ref(),
         &text,
         config.token_budget,
+        completed.unwrap_or(false),
     )
     .await
 }

@@ -30,7 +30,10 @@ pub struct CustomOpenAIConfig {
     pub top_p: Option<f32>,
 }
 
+pub mod ask_ai;
+pub mod ask_commands;
 pub mod commands;
+pub mod insight_commands;
 pub(crate) mod language_detection;
 pub mod live_insight;
 pub mod llm_client;

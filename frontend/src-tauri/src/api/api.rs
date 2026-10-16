@@ -1178,9 +1178,61 @@ pub async fn debug_backend_connection<R: Runtime>(app: AppHandle<R>) -> Result<S
     }
 }
 
+const MAX_OPENABLE_URL_CHARS: usize = 2048;
+
+/// Whether `host` points at this machine or a private network. A link from an AI answer
+/// must not be able to make the browser hit local services with one click.
+fn is_local_host(host: &url::Host<&str>) -> bool {
+    match host {
+        url::Host::Domain(domain) => {
+            let domain = domain.trim_end_matches('.').to_ascii_lowercase();
+            domain == "localhost" || domain.ends_with(".localhost") || domain.ends_with(".local")
+        }
+        url::Host::Ipv4(ip) => {
+            ip.is_loopback()
+                || ip.is_private()
+                || ip.is_link_local()
+                || ip.is_unspecified()
+                || ip.is_broadcast()
+        }
+        url::Host::Ipv6(ip) => {
+            let first_segment = ip.segments()[0];
+            ip.is_loopback()
+                || ip.is_unspecified()
+                || (first_segment & 0xfe00) == 0xfc00 // unique local fc00::/7
+                || (first_segment & 0xffc0) == 0xfe80 // link local fe80::/10
+        }
+    }
+}
+
+/// The normalized form of `url` when it is safe to hand to the OS shell, or None.
+///
+/// The URL can come from AI answers or web results, so only public http(s) links are
+/// accepted: no `file:`, `javascript:` or custom-protocol schemes (they would launch
+/// arbitrary handlers), no embedded credentials (`https://gov.br@evil.example`), no
+/// local or private hosts, and a bounded length. The caller must open the *returned*
+/// string, never the original one.
+fn openable_web_url(url: &str) -> Option<String> {
+    if url.chars().count() > MAX_OPENABLE_URL_CHARS {
+        return None;
+    }
+
+    let parsed = url::Url::parse(url.trim()).ok()?;
+    let acceptable = matches!(parsed.scheme(), "http" | "https")
+        && parsed.username().is_empty()
+        && parsed.password().is_none()
+        && parsed.host().is_some_and(|host| !is_local_host(&host));
+
+    acceptable.then(|| parsed.to_string())
+}
+
 #[tauri::command]
 pub async fn open_external_url(url: String) -> Result<(), String> {
     use std::process::Command;
+
+    let Some(url) = openable_web_url(&url) else {
+        return Err("Só é possível abrir links http ou https públicos".to_string());
+    };
 
     let result = if cfg!(target_os = "windows") {
         // NOT `cmd /C start <url>`: std::process::Command only quotes an
@@ -1448,6 +1500,78 @@ pub async fn api_test_custom_openai_connection<R: Runtime>(
             } else {
                 Err(format!("Falha na conexão: {}", e))
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod open_url_tests {
+    use super::openable_web_url;
+
+    #[test]
+    fn accepts_public_http_and_https_links() {
+        assert!(openable_web_url("https://ollama.com/download").is_some());
+        assert!(openable_web_url("http://example.com/path?a=1&b=2").is_some());
+    }
+
+    #[test]
+    fn returns_the_normalized_url_so_the_validated_string_is_the_opened_one() {
+        for (input, expected) in [
+            (" https://example.com/ ", "https://example.com/"),
+            ("https://exa\tmple.com/", "https://example.com/"),
+            ("https://example.com/a\nb", "https://example.com/ab"),
+            ("https:evil.example", "https://evil.example/"),
+            ("https://example.com/a\" --flag", "https://example.com/a%22%20--flag"),
+        ] {
+            assert_eq!(openable_web_url(input).as_deref(), Some(expected), "input: {input:?}");
+        }
+    }
+
+    #[test]
+    fn rejects_embedded_credentials() {
+        assert!(openable_web_url("https://www.gov.br@evil.example/").is_none());
+        assert!(openable_web_url("https://user:pass@example.com/").is_none());
+    }
+
+    #[test]
+    fn rejects_local_and_private_hosts() {
+        for url in [
+            "http://localhost:11434/",
+            "http://app.localhost/",
+            "http://printer.local/",
+            "http://127.0.0.1:8080/",
+            "http://10.0.0.5/",
+            "http://192.168.0.1/admin",
+            "http://172.16.0.9/",
+            "http://169.254.169.254/latest/meta-data",
+            "http://0.0.0.0/",
+            "http://[::1]/",
+            "http://[fd00::1]/",
+            "http://[fe80::1]/",
+        ] {
+            assert!(openable_web_url(url).is_none(), "'{url}' should be rejected");
+        }
+    }
+
+    #[test]
+    fn rejects_overlong_urls() {
+        let long = format!("https://example.com/{}", "a".repeat(2100));
+
+        assert!(openable_web_url(&long).is_none());
+    }
+
+    #[test]
+    fn rejects_other_schemes_and_malformed_input() {
+        for url in [
+            "file:///C:/Windows/System32/calc.exe",
+            "javascript:alert(1)",
+            "ms-msdt:/id PCWDiagnostic",
+            "ftp://example.com/x",
+            "https://",
+            "not a url",
+            "",
+        ] {
+            assert!(openable_web_url(url).is_none(), "'{url}' should be rejected");
         }
     }
 }

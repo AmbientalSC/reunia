@@ -7,6 +7,11 @@ import { useSidebar } from '@/components/Sidebar/SidebarProvider';
 import { useRecordingState, RecordingStatus } from '@/contexts/RecordingStateContext';
 import { storageService } from '@/services/storageService';
 import { transcriptService } from '@/services/transcriptService';
+import { liveInsightService } from '@/services/liveInsightService';
+import { liveInsightStore } from '@/lib/liveInsightStore';
+import { persistLiveInsight } from '@/lib/persistLiveInsight';
+import { buildInsightExcerpt } from '@/lib/insight-excerpt';
+import { useConfig } from '@/contexts/ConfigContext';
 import Analytics from '@/lib/analytics';
 import {
   applyPinnedSummaryLanguageToMeeting,
@@ -68,6 +73,7 @@ export function useRecordingStop(
   } = useSidebar();
 
   const router = useRouter();
+  const { modelConfig } = useConfig();
 
   // Guard to prevent duplicate/concurrent stop calls (e.g., from UI and tray simultaneously)
   const stopInProgressRef = useRef(false);
@@ -252,6 +258,9 @@ export function useRecordingStop(
           last_transcript: freshTranscripts.length > 0 ? freshTranscripts[freshTranscripts.length - 1].text.substring(0, 30) + '...' : 'none',
         });
 
+        // The insight of this recording; a new recording starts a new session.
+        const insightSession = liveInsightStore.session();
+
         try {
           const responseData = await storageService.saveMeeting(
             savedMeetingName || meetingTitle || 'Nova Reunião',  // PREFER savedMeetingName (backend source)
@@ -264,6 +273,24 @@ export function useRecordingStop(
             console.error('No meeting_id in response:', responseData);
             throw new Error('Nenhum ID de reunião recebido da operação de salvamento');
           }
+
+          // Keep the live insight with the meeting, in the background (best effort).
+          void persistLiveInsight({
+            meetingId,
+            session: insightSession,
+            totalSegments: freshTranscripts.length,
+            save: (id, insight) => liveInsightService.save(id, insight),
+            regenerate: () => {
+              if (!modelConfig.provider || !modelConfig.model) {
+                return Promise.reject(new Error('Nenhum modelo de IA configurado'));
+              }
+              return liveInsightService.generateLiveInsight(
+                buildInsightExcerpt(freshTranscripts),
+                modelConfig.provider,
+                modelConfig.model
+              );
+            },
+          });
 
           let shouldDetectSummaryLanguage = false;
           try {

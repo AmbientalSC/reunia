@@ -1,10 +1,14 @@
 "use client";
 
-import { ReactNode } from 'react';
+import { ReactNode, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { LiveInsightData } from '@/types';
 import { LiveInsightStatus } from '@/hooks/useLiveInsight';
-import { AlertTriangle, ClipboardList, HelpCircle, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { AlertTriangle, ClipboardList, HelpCircle, Loader2, RefreshCw, Search, Sparkles, Tag } from 'lucide-react';
+import { SelectionAskButton } from '@/components/ask/SelectionAskButton';
+import { useAskAi } from '@/contexts/AskAiContext';
+import { buildAskContext } from '@/lib/ask-selection';
+import { AskOpenRequest } from '@/types/ask';
 
 interface LiveInsightPanelProps {
   insight: LiveInsightData | null;
@@ -12,6 +16,10 @@ interface LiveInsightPanelProps {
   error: string | null;
   hasEnoughTranscript: boolean;
   onRefresh: () => void;
+  /** `saved`: the insight of a finished meeting, generated on demand instead of automatically. */
+  variant?: 'live' | 'saved';
+  /** Meeting text sent to the AI as background when the user asks about `query`. */
+  getTranscriptContext?: (query: string) => string;
 }
 
 function SectionHeading({ icon, children }: { icon: ReactNode; children: ReactNode }) {
@@ -27,11 +35,62 @@ function SectionHeading({ icon, children }: { icon: ReactNode; children: ReactNo
 
 /**
  * Renders the lightweight, real-time insight generated while a meeting is
- * being recorded (see `useLiveInsight`). Separate from the post-meeting
- * summary/report and from the "Tela" visual summary — this panel only ever
- * shows the most recent insight in memory, nothing persisted.
+ * being recorded (see `useLiveInsight`), and the one saved with a meeting.
+ * Separate from the post-meeting summary/report and from the "Tela" visual
+ * summary.
+ *
+ * Keywords are clickable and any text selected in the insight can be sent to
+ * the "Perguntar à IA" side panel.
  */
-export function LiveInsightPanel({ insight, status, error, hasEnoughTranscript, onRefresh }: LiveInsightPanelProps) {
+export function LiveInsightPanel({
+  insight,
+  status,
+  error,
+  hasEnoughTranscript,
+  onRefresh,
+  variant = 'live',
+  getTranscriptContext,
+}: LiveInsightPanelProps) {
+  const { openAsk } = useAskAi();
+  const selectionScopeRef = useRef<HTMLDivElement>(null);
+
+  const ask = (kind: AskOpenRequest['kind'], query: string) => {
+    openAsk({
+      kind,
+      query,
+      // The end of the context is the part kept when it is too long, so the topic goes last.
+      context: buildAskContext([
+        getTranscriptContext?.(query),
+        insight?.topic.title ? `Tópico atual: ${insight.topic.title}` : null,
+      ]),
+    });
+  };
+
+  if (!insight && status === 'idle' && variant === 'saved') {
+    return (
+      <div className="flex flex-1 items-center justify-center p-6">
+        <div className="max-w-md text-center">
+          <Sparkles size={36} className="mx-auto mb-3 text-[#164194]" aria-hidden="true" />
+          <p className="mb-1 font-medium text-gray-800">Nenhum insight salvo</p>
+          <p className="mb-4 text-sm font-light text-gray-500">
+            {hasEnoughTranscript
+              ? 'Gere o insight desta reunião a partir da transcrição.'
+              : 'Esta reunião não tem transcrição para gerar o insight.'}
+          </p>
+          <Button
+            className="bg-[#A8C950] text-white hover:bg-[#9BBF3B]"
+            size="sm"
+            onClick={onRefresh}
+            disabled={!hasEnoughTranscript}
+          >
+            <Sparkles size={16} className="mr-1.5" />
+            Gerar insight
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (!insight && status === 'idle') {
     return (
       <div className="flex flex-1 items-center justify-center p-6">
@@ -82,6 +141,7 @@ export function LiveInsightPanel({ insight, status, error, hasEnoughTranscript, 
   const hasQuestions = insight.questions.length > 0;
   const hasActions = insight.actions.length > 0;
   const hasAttention = insight.attention_points.length > 0;
+  const keywords = insight.keywords ?? [];
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -111,7 +171,28 @@ export function LiveInsightPanel({ insight, status, error, hasEnoughTranscript, 
         </Button>
       </div>
 
-      <div className="px-6 py-4 text-[#312D31]">
+      <div ref={selectionScopeRef} className="px-6 py-4 text-[#312D31]">
+        {keywords.length > 0 && (
+          <section className="mb-5">
+            <SectionHeading icon={<Tag size={15} />}>Palavras-chave</SectionHeading>
+            <ul className="flex flex-wrap gap-2">
+              {keywords.map((keyword) => (
+                <li key={keyword}>
+                  <button
+                    type="button"
+                    onClick={() => ask('term', keyword)}
+                    title={`Pesquisar "${keyword}"`}
+                    className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-sm font-light text-[#164194] transition-colors hover:border-[#164194] hover:bg-[#F7F7F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#164194]"
+                  >
+                    <Search size={12} aria-hidden="true" />
+                    {keyword}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {hasSummary && (
           <section className="mb-5">
             <SectionHeading icon={<Sparkles size={15} />}>Resumo do momento</SectionHeading>
@@ -184,6 +265,8 @@ export function LiveInsightPanel({ insight, status, error, hasEnoughTranscript, 
           </section>
         )}
       </div>
+
+      <SelectionAskButton scopeRef={selectionScopeRef} onAsk={(text) => ask('selection', text)} />
     </div>
   );
 }

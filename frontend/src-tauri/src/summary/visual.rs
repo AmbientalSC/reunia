@@ -29,7 +29,7 @@ static VISUAL_TASKS: Lazy<Arc<Mutex<HashMap<String, (u64, CancellationToken)>>>>
 static NEXT_GENERATION: AtomicU64 = AtomicU64::new(1);
 
 /// Everything the LLM call needs, already resolved (API key, endpoints, limits).
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct VisualLlmConfig {
     pub provider: LLMProvider,
     pub model_name: String,
@@ -42,6 +42,23 @@ pub struct VisualLlmConfig {
     pub app_data_dir: Option<PathBuf>,
     /// Context budget in tokens for the target model; used to cap the input size.
     pub token_budget: usize,
+}
+
+// Manual `Debug` so that logging the config (`{:?}`) can never print the API key.
+impl std::fmt::Debug for VisualLlmConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VisualLlmConfig")
+            .field("provider", &self.provider)
+            .field("model_name", &self.model_name)
+            .field("api_key", &"<redacted>")
+            .field("ollama_endpoint", &self.ollama_endpoint)
+            .field("custom_openai_endpoint", &self.custom_openai_endpoint)
+            .field("max_tokens", &self.max_tokens)
+            .field("temperature", &self.temperature)
+            .field("top_p", &self.top_p)
+            .field("token_budget", &self.token_budget)
+            .finish()
+    }
 }
 
 /// Resolves provider configuration from the database for a standalone

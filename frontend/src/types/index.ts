@@ -136,6 +136,8 @@ export interface LiveInsightData {
   questions: string[];
   actions: string[];
   attention_points: string[];
+  /** Terms worth explaining (acronyms, companies, laws...). Absent in insights saved before this existed. */
+  keywords?: string[];
 }
 
 // Pagination types for optimized transcript loading

@@ -11,8 +11,9 @@ import { useRecordingState } from '@/contexts/RecordingStateContext';
 import { usePermissionCheck } from '@/hooks/usePermissionCheck';
 import { ModalType } from '@/hooks/useModalState';
 import { useIsLinux } from '@/hooks/usePlatform';
-import { MIN_SEGMENTS_BEFORE_FIRST_INSIGHT, useLiveInsight } from '@/hooks/useLiveInsight';
-import { useMemo, useState } from 'react';
+import { useLiveInsight } from '@/hooks/useLiveInsight';
+import { INSIGHT_MIN_SEGMENTS } from '@/lib/insight-schedule';
+import { useCallback, useMemo, useState } from 'react';
 
 /**
  * TranscriptPanel Component
@@ -34,6 +35,9 @@ interface TranscriptPanelProps {
 }
 
 type TranscriptView = 'transcricao' | 'insight';
+
+/** How many of the latest segments are sent to the AI as background for a question. */
+const INSIGHT_CONTEXT_SEGMENTS = 25;
 
 export function TranscriptPanel({
   isProcessingStop,
@@ -66,6 +70,13 @@ export function TranscriptPanel({
   const finalizedSegments = useMemo(
     () => transcripts.filter(t => !t.is_partial).map(t => ({ text: t.text })),
     [transcripts]
+  );
+
+  // Recent speech, sent as background when the user asks the AI about the insight.
+  const getTranscriptContext = useCallback(
+    (_query: string) =>
+      finalizedSegments.slice(-INSIGHT_CONTEXT_SEGMENTS).map((segment) => segment.text).join(' '),
+    [finalizedSegments]
   );
 
   const {
@@ -170,8 +181,9 @@ export function TranscriptPanel({
           insight={liveInsight}
           status={liveInsightStatus}
           error={liveInsightError}
-          hasEnoughTranscript={finalizedSegments.length >= MIN_SEGMENTS_BEFORE_FIRST_INSIGHT}
+          hasEnoughTranscript={finalizedSegments.length >= INSIGHT_MIN_SEGMENTS}
           onRefresh={generateLiveInsightNow}
+          getTranscriptContext={getTranscriptContext}
         />
       </div>
     </div>

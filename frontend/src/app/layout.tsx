@@ -24,6 +24,8 @@ import { loadBetaFeatures } from '@/types/betaFeatures'
 import { DownloadProgressToastProvider } from '@/components/shared/DownloadProgressToast'
 import { UpdateCheckProvider } from '@/components/UpdateCheckProvider'
 import { RecordingPostProcessingProvider } from '@/contexts/RecordingPostProcessingProvider'
+import { AskAiProvider } from '@/contexts/AskAiContext'
+import { AskAiPanel } from '@/components/ask/AskAiPanel'
 import { ImportAudioDialog, ImportDropOverlay } from '@/components/ImportAudio'
 import { ImportDialogProvider } from '@/contexts/ImportDialogContext'
 import { isAudioExtension, getAudioFormatsDisplayList } from '@/constants/audioFormats'
@@ -289,6 +291,7 @@ export default function RootLayout({
                         <UpdateCheckProvider>
                           <SidebarProvider>
                             <TooltipProvider>
+                              <AskAiProvider>
                               <RecordingPostProcessingProvider>
                                 <ImportDialogProvider onOpen={handleOpenImportDialog}>
                                   {/* Download progress toast provider - listens for background downloads */}
@@ -310,8 +313,11 @@ export default function RootLayout({
                                     handleImportDialogClose={handleImportDialogClose}
                                     importFilePath={importFilePath}
                                   />
+                                  {/* "Perguntar à IA" side panel (keywords and selected text) */}
+                                  <AskAiPanel />
                                 </ImportDialogProvider>
                               </RecordingPostProcessingProvider>
+                              </AskAiProvider>
                             </TooltipProvider>
                           </SidebarProvider>
                         </UpdateCheckProvider>
