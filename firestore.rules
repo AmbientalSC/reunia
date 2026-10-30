@@ -2,7 +2,7 @@ rules_version = '2';
 
 // Deploy: firebase deploy --only firestore:rules --project reunia-5974f
 //
-// user_profiles/{email}: perfil de quem usa o ReunIA — acesso (authorized),
+// user_profiles/{email}: perfil de quem usa o ReuniAMB — acesso (authorized),
 // função (role), chave do Groq e contadores de uso. O ID do documento é o
 // e-mail do usuário em minúsculas — não o Firebase uid. Só o próprio usuário
 // lê o próprio perfil (necessário no login, comparando com o claim "email"

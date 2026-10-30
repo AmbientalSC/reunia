@@ -26,10 +26,10 @@ export function LoginScreen() {
   return (
     <div className="flex h-screen w-screen flex-col items-center justify-center gap-6 bg-white px-6">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo.png" alt="ReunIA" width={72} height={72} />
+      <img src="/logo.png" alt="ReuniAMB" width={72} height={72} />
 
       <div className="flex flex-col items-center gap-1 text-center">
-        <h1 className="text-xl font-semibold text-gray-900">Bem-vindo ao ReunIA</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Bem-vindo ao ReuniAMB</h1>
         <p className="text-sm text-gray-500">
           Entre com sua conta corporativa Ambiental para continuar.
         </p>

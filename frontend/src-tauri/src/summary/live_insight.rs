@@ -66,7 +66,7 @@ fn system_prompt(completed: bool) -> String {
     };
 
     format!(
-        r#"Você é o analista de reuniões do ReunIA. Sua tarefa exclusiva é transformar {task} em fatos, temas e próximos passos verificáveis.
+        r#"Você é o analista de reuniões do ReuniAMB. Sua tarefa exclusiva é transformar {task} em fatos, temas e próximos passos verificáveis.
 
 REGRAS CRÍTICAS:
 - Analise somente o texto fornecido; {timing}

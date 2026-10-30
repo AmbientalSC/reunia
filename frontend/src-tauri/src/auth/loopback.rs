@@ -6,14 +6,14 @@ const SUCCESS_PAGE: &str = r#"<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="utf-8"><title>Login concluído</title></head>
 <body style="font-family: sans-serif; text-align: center; padding-top: 4rem;">
 <h2>Login concluído</h2>
-<p>Você já pode fechar esta aba e voltar para o ReunIA.</p>
+<p>Você já pode fechar esta aba e voltar para o ReuniAMB.</p>
 </body></html>"#;
 
 const ERROR_PAGE: &str = r#"<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="utf-8"><title>Falha no login</title></head>
 <body style="font-family: sans-serif; text-align: center; padding-top: 4rem;">
 <h2>Não foi possível concluir o login</h2>
-<p>Feche esta aba e tente novamente no ReunIA.</p>
+<p>Feche esta aba e tente novamente no ReuniAMB.</p>
 </body></html>"#;
 
 /// A one-shot local HTTP listener used to capture the OAuth redirect

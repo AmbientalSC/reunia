@@ -86,7 +86,7 @@ export function SetupOverviewStep() {
   return (
     <OnboardingContainer
       title="Visão geral da configuração"
-      description="O ReunIA requer que você baixe os modelos de IA de Transcrição e Resumo para o software funcionar."
+      description="O ReuniAMB requer que você baixe os modelos de IA de Transcrição e Resumo para o software funcionar."
       step={2}
       totalSteps={isMac ? 4 : 3}
     >

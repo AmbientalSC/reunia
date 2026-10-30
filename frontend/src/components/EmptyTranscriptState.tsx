@@ -83,7 +83,7 @@ export function EmptyTranscriptState({ isRecording, isPaused }: EmptyTranscriptS
 
       {/* Título e subtítulo */}
       <h2 className="text-2xl font-semibold text-ambiental-text tracking-tight">
-        Boas-vindas ao ReunIA!
+        Boas-vindas ao ReuniAMB!
       </h2>
       <p className="text-sm font-light text-ambiental-gray-mid mt-2 max-w-sm leading-relaxed">
         Inicie a gravação para ver a transcrição ao vivo da sua reunião

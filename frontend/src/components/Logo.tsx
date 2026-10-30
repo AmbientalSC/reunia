@@ -21,13 +21,13 @@ const Logo = React.forwardRef<HTMLButtonElement, LogoProps>(({ isCollapsed }, re
         <DialogTrigger asChild>
           <span className="flex items-center gap-2 text-center border rounded-full bg-ambiental-blue-soft border-ambiental-blue-soft font-semibold text-ambiental-blue mb-2 px-4 py-1.5 block cursor-pointer hover:opacity-80 transition-opacity">
             <AmbientalLogo size={22} />
-            <span>ReunIA</span>
+            <span>ReuniAMB</span>
           </span>
         </DialogTrigger>
       )}
       <DialogContent>
         <VisuallyHidden>
-          <DialogTitle>Sobre o ReunIA</DialogTitle>
+          <DialogTitle>Sobre o ReuniAMB</DialogTitle>
         </VisuallyHidden>
         <About />
       </DialogContent>

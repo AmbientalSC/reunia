@@ -11,6 +11,7 @@ import { PreferenceSettings } from '@/components/PreferenceSettings';
 import { SummaryModelSettings } from '@/components/SummaryModelSettings';
 import { BetaSettings } from '@/components/BetaSettings';
 import { AdminUsersTab } from '@/components/admin/AdminUsersTab';
+import { AccountSection } from '@/components/auth/AccountSection';
 import { useAuth } from '@/contexts/AuthContext';
 import { useConfig } from '@/contexts/ConfigContext';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -115,7 +116,8 @@ export default function SettingsPage() {
               />
             </TabsList>
 
-            <TabsContent value="general">
+            <TabsContent value="general" className="space-y-6">
+              <AccountSection />
               <PreferenceSettings />
             </TabsContent>
             <TabsContent value="recording">

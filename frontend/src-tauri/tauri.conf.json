@@ -1,7 +1,7 @@
 {
     "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
     "productName": "ReunIA",
-    "version": "0.5.0",
+    "version": "0.5.1",
     "identifier": "com.ambiental.reunia",
     "build": {
         "frontendDist": "../out",
@@ -12,7 +12,7 @@
     "app": {
         "windows": [
             {
-                "title": "ReunIA",
+                "title": "ReuniAMB",
                 "width": 1100,
                 "height": 700,
                 "resizable": true,

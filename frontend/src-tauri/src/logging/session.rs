@@ -114,7 +114,7 @@ fn log_system_info(app_version: &str, log_dir: &Path) {
         .unwrap_or_else(|| "desconhecida".to_string());
 
     log::info!(
-        "ReunIA {} iniciado | SO: {} | CPU: {} ({} threads{}) | motores locais: {} | RAM: {} MB total, {} MB livre | logs: {}",
+        "ReuniAMB {} iniciado | SO: {} | CPU: {} ({} threads{}) | motores locais: {} | RAM: {} MB total, {} MB livre | logs: {}",
         app_version,
         System::long_os_version().unwrap_or_else(|| "desconhecido".to_string()),
         cpu,

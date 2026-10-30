@@ -79,7 +79,7 @@ export function About() {
 
             {/* Features Grid - Compact */}
             <div className="space-y-3">
-                <h2 className="text-base font-semibold text-gray-800">O que torna o ReunIA diferente</h2>
+                <h2 className="text-base font-semibold text-gray-800">O que torna o ReuniAMB diferente</h2>
                 <div className="grid grid-cols-2 gap-2">
                     <div className="bg-gray-50 rounded p-3 hover:bg-gray-100 transition-colors">
                         <h3 className="font-bold text-sm text-gray-900 mb-1">Privacidade em primeiro lugar</h3>

@@ -114,7 +114,7 @@ export function PermissionsStep() {
   return (
     <OnboardingContainer
       title="Conceder Permissões"
-      description="O ReunIA precisa de acesso ao seu microfone e ao áudio do sistema para gravar reuniões"
+      description="O ReuniAMB precisa de acesso ao seu microfone e ao áudio do sistema para gravar reuniões"
       step={4}
       hideProgress={true}
       showNavigation={allPermissionsGranted}

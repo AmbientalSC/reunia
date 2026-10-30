@@ -24,7 +24,7 @@ export function WelcomeStep() {
 
   return (
     <OnboardingContainer
-      title="Boas-vindas ao ReunIA"
+      title="Boas-vindas ao ReuniAMB"
       description="Grave. Transcreva. Resuma. Tudo no seu dispositivo."
       step={1}
       hideProgress={true}

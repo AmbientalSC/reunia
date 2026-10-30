@@ -119,14 +119,14 @@ impl Notification {
             None => "A gravação foi iniciada. Informe os demais participantes da reunião de que você está gravando.".to_string(),
         };
 
-        Notification::new("ReunIA", body, NotificationType::RecordingStarted)
+        Notification::new("ReuniAMB", body, NotificationType::RecordingStarted)
             .with_priority(NotificationPriority::High)
             .with_timeout(NotificationTimeout::Seconds(5))
     }
 
     pub fn recording_stopped() -> Self {
         Notification::new(
-            "ReunIA",
+            "ReuniAMB",
             "A gravação foi interrompida e salva",
             NotificationType::RecordingStopped
         )
@@ -136,7 +136,7 @@ impl Notification {
 
     pub fn recording_paused() -> Self {
         Notification::new(
-            "ReunIA",
+            "ReuniAMB",
             "A gravação foi pausada",
             NotificationType::RecordingPaused
         )
@@ -146,7 +146,7 @@ impl Notification {
 
     pub fn recording_resumed() -> Self {
         Notification::new(
-            "ReunIA",
+            "ReuniAMB",
             "A gravação foi retomada",
             NotificationType::RecordingResumed
         )
@@ -160,7 +160,7 @@ impl Notification {
             None => "A transcrição foi concluída".to_string(),
         };
 
-        Notification::new("ReunIA", body, NotificationType::TranscriptionComplete)
+        Notification::new("ReuniAMB", body, NotificationType::TranscriptionComplete)
             .with_priority(NotificationPriority::Normal)
             .with_timeout(NotificationTimeout::Seconds(5))
     }
@@ -171,7 +171,7 @@ impl Notification {
             None => format!("A reunião começa em {} minutos", minutes_until),
         };
 
-        Notification::new("ReunIA", body, NotificationType::MeetingReminder(minutes_until))
+        Notification::new("ReuniAMB", body, NotificationType::MeetingReminder(minutes_until))
             .with_priority(NotificationPriority::High)
             .with_timeout(NotificationTimeout::Seconds(10))
     }
@@ -179,7 +179,7 @@ impl Notification {
     pub fn system_error(error: impl Into<String>) -> Self {
         let error_string = error.into();
         Notification::new(
-            "Erro do ReunIA",
+            "Erro do ReuniAMB",
             error_string.clone(),
             NotificationType::SystemError(error_string)
         )
@@ -189,7 +189,7 @@ impl Notification {
 
     pub fn test_notification() -> Self {
         Notification::new(
-            "ReunIA",
+            "ReuniAMB",
             "Esta é uma notificação de teste para verificar se o sistema está funcionando corretamente",
             NotificationType::Test
         )

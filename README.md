@@ -2,7 +2,7 @@
     <h1>
         <img src="frontend/public/logo.png" width="120" style="border-radius: 10px;" />
         <br>
-        ReunIA
+        ReuniAMB
     </h1>
     <p>
     Assistente de reuniões com IA, local-first, mantido pela Ambiental Limpeza Urbana e Saneamento.
@@ -15,7 +15,7 @@
 <summary>Sumário</summary>
 
 - [Introdução](#introdução)
-- [Por que o ReunIA?](#por-que-o-reunia)
+- [Por que o ReuniAMB?](#por-que-o-reuniamb)
 - [Funcionalidades](#funcionalidades)
 - [Instalação](#instalação)
 - [Funcionalidades em Ação](#funcionalidades-em-ação)
@@ -28,7 +28,7 @@
 
 ## Introdução
 
-O ReunIA é um assistente de reuniões com IA que roda inteiramente na máquina de quem usa. Ele grava, transcreve em tempo real e gera resumos das reuniões, sem enviar dados para a nuvem — a solução certa para quem precisa manter controle total sobre informações sensíveis da Ambiental.
+O ReuniAMB é um assistente de reuniões com IA que roda inteiramente na máquina de quem usa. Ele grava, transcreve em tempo real e gera resumos das reuniões, sem enviar dados para a nuvem — a solução certa para quem precisa manter controle total sobre informações sensíveis da Ambiental.
 
 ## Funcionalidades
 
@@ -47,13 +47,13 @@ O ReunIA é um assistente de reuniões com IA que roda inteiramente na máquina 
 
 ## Arquitetura
 
-O ReunIA é uma aplicação única e autocontida, construída com [Tauri](https://tauri.app/). Usa um backend em Rust para toda a lógica principal e um frontend em Next.js para a interface.
+O ReuniAMB é uma aplicação única e autocontida, construída com [Tauri](https://tauri.app/). Usa um backend em Rust para toda a lógica principal e um frontend em Next.js para a interface.
 
 Para mais detalhes, veja a [documentação de arquitetura](docs/architecture.md).
 
 ## Para Desenvolvedores
 
-Para contribuir com o ReunIA ou compilar a partir do código-fonte, você vai precisar de Rust e Node.js instalados. Instruções detalhadas de build estão no [guia de build](docs/BUILDING.md).
+Para contribuir com o ReuniAMB ou compilar a partir do código-fonte, você vai precisar de Rust e Node.js instalados. Instruções detalhadas de build estão no [guia de build](docs/BUILDING.md).
 
 ## Contribuindo
 
@@ -61,13 +61,13 @@ Contribuições da equipe são bem-vindas! Se tiver dúvidas ou sugestões, abra
 
 ## Licença
 
-MIT License. O ReunIA é um fork interno do [Meetily](https://github.com/Zackriya-Solutions/meeting-minutes) (Zackriya Solutions), mantido e estendido pela Ambiental Limpeza Urbana e Saneamento — veja [LICENSE.md](LICENSE.md).
+MIT License. O ReuniAMB é um fork interno do [Meetily](https://github.com/Zackriya-Solutions/meeting-minutes) (Zackriya Solutions), mantido e estendido pela Ambiental Limpeza Urbana e Saneamento — veja [LICENSE.md](LICENSE.md).
 
 ## Agradecimentos
 
 - Código do [Whisper.cpp](https://github.com/ggerganov/whisper.cpp).
 - Código do [Screenpipe](https://github.com/mediar-ai/screenpipe).
 - Código do [transcribe-rs](https://crates.io/crates/transcribe-rs).
-- Ao time do [Meetily](https://github.com/Zackriya-Solutions/meeting-minutes), projeto original do qual o ReunIA nasceu.
+- Ao time do [Meetily](https://github.com/Zackriya-Solutions/meeting-minutes), projeto original do qual o ReuniAMB nasceu.
 - À **NVIDIA**, pelo desenvolvimento do modelo **Parakeet**.
 - A [istupakov](https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx), pela conversão **ONNX** do modelo Parakeet.

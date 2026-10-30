@@ -502,7 +502,7 @@ export function DownloadProgressStep() {
   return (
     <OnboardingContainer
       title="Preparando tudo"
-      description="Você pode começar a usar o ReunIA após baixar o mecanismo de transcrição."
+      description="Você pode começar a usar o ReuniAMB após baixar o mecanismo de transcrição."
       step={3}
       totalSteps={isMac ? 4 : 3}
     >

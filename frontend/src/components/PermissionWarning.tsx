@@ -98,7 +98,7 @@ export function PermissionWarning({
             {!hasMicrophone && (
               <>
                 <p className="mb-3">
-                  O ReunIA precisa de acesso ao seu microfone para gravar reuniões. Nenhum dispositivo de microfone foi detectado.
+                  O ReuniAMB precisa de acesso ao seu microfone para gravar reuniões. Nenhum dispositivo de microfone foi detectado.
                 </p>
                 <div className="space-y-2 text-sm mb-4">
                   <p className="font-medium">Verifique:</p>
@@ -124,7 +124,7 @@ export function PermissionWarning({
                     <p className="font-medium">Para ativar o áudio do sistema no macOS:</p>
                     <ul className="list-disc list-inside ml-2 space-y-1">
                       <li>Instale um dispositivo de áudio virtual (ex.: BlackHole 2ch)</li>
-                      <li>Conceda a permissão de Gravação de Tela ao ReunIA</li>
+                      <li>Conceda a permissão de Gravação de Tela ao ReuniAMB</li>
                       <li>Configure o roteamento de áudio no Audio MIDI Setup</li>
                     </ul>
                   </div>

@@ -174,7 +174,7 @@ fn system_prompt(web_enabled: bool) -> String {
     };
 
     format!(
-        r#"Você é o assistente de pesquisa do ReunIA, um aplicativo de reuniões. O usuário está em uma reunião (ou revendo uma) e quer entender rápido um termo ou um trecho.
+        r#"Você é o assistente de pesquisa do ReuniAMB, um aplicativo de reuniões. O usuário está em uma reunião (ou revendo uma) e quer entender rápido um termo ou um trecho.
 
 REGRAS:
 - Responda em português do Brasil, de forma direta: um a três parágrafos curtos ou uma lista curta. Use Markdown simples (negrito e listas); sem títulos grandes, tabelas, HTML ou imagens.
