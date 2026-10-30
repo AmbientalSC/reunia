@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { KeyRound, Loader2, Trash2, UserPlus } from 'lucide-react';
+import { Loader2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,11 +11,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ConfirmationModal } from '@/components/ConfirmationModel/confirmation-modal';
 import { useAuth } from '@/contexts/AuthContext';
 import { GroqKeyDialog } from './GroqKeyDialog';
+import { UserRow } from './UserRow';
 import {
   ALLOWED_EMAIL_DOMAIN,
+  ROLE_LABELS,
+  countRecentlyActive,
   deleteUser,
   listUsers,
+  setUserAuthorized,
   setUserGroqKey,
+  setUserRole,
+  sortByLastAccess,
   upsertUser,
   userFormSchema,
   type ManagedUser,
@@ -23,14 +29,14 @@ import {
 } from '@/lib/adminUsers';
 import type { UserRole } from '@/lib/userProfile';
 
-const ROLE_LABELS: Record<UserRole, string> = { admin: 'Administrador', user: 'Usuário' };
+const ACTIVE_WINDOW_DAYS = 7;
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Erro inesperado.';
 }
 
 export function AdminUsersTab() {
-  const { user } = useAuth();
+  const { userEmail } = useAuth();
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
@@ -68,7 +74,7 @@ export function AdminUsersTab() {
 
   const changeRole = async (target: ManagedUser, role: UserRole) => {
     try {
-      await upsertUser({ email: target.email, role });
+      await setUserRole(target.email, role);
       await refresh();
     } catch (error) {
       toast.error(errorMessage(error));
@@ -84,6 +90,18 @@ export function AdminUsersTab() {
       // The dialog shows the message; refresh in case the user was changed or removed meanwhile.
       await refresh();
       throw error;
+    }
+  };
+
+  const toggleAuthorized = async (target: ManagedUser) => {
+    const authorized = !target.authorized;
+    try {
+      await setUserAuthorized(target.email, authorized);
+      toast.success(`${target.email} ${authorized ? 'desbloqueado' : 'bloqueado'}.`);
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      await refresh();
     }
   };
 
@@ -103,13 +121,17 @@ export function AdminUsersTab() {
   const role = form.watch('role');
   const emailError = form.formState.errors.email?.message;
   const groqKeyError = form.formState.errors.groqApiKey?.message;
+  const sortedUsers = useMemo(() => sortByLastAccess(users), [users]);
+  const activeCount = useMemo(() => countRecentlyActive(users, ACTIVE_WINDOW_DAYS), [users]);
 
   return (
     <div className="space-y-6 mt-6">
       <section className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold mb-1">Autorizar usuário</h2>
+        <h2 className="text-lg font-semibold mb-1">Adicionar ou promover usuário</h2>
         <p className="text-sm text-gray-600 mb-4">
-          Só quem estiver nesta lista consegue entrar no app.
+          Qualquer pessoa com e-mail {ALLOWED_EMAIL_DOMAIN} entra sozinha no primeiro login. Use este
+          formulário para já definir a função ou a chave do Groq de alguém. Se a pessoa estiver
+          bloqueada, salvar aqui também a desbloqueia.
         </p>
         <form onSubmit={form.handleSubmit(save)} className="space-y-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
@@ -156,58 +178,30 @@ export function AdminUsersTab() {
       </section>
 
       <section className="bg-white rounded-lg border border-gray-200">
-        <h2 className="text-lg font-semibold p-6 pb-3">Usuários ({users.length})</h2>
+        <div className="p-6 pb-3">
+          <h2 className="text-lg font-semibold">Usuários ({users.length})</h2>
+          <p className="text-sm text-gray-600">
+            {activeCount} com acesso nos últimos {ACTIVE_WINDOW_DAYS} dias. Os números vêm do próprio app e
+            medem adoção; versões antigas do app ainda não enviam dados.
+          </p>
+        </div>
         {isLoading ? (
           <div className="flex justify-center p-8">
             <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
           </div>
         ) : (
-          <ul className="divide-y divide-gray-100">
-            {users.map((target) => {
-              const isSelf = target.email === user?.email?.toLowerCase();
-              return (
-                <li key={target.email} className="flex items-center gap-3 px-6 py-3">
-                  <span className="flex-1 truncate text-sm">
-                    {target.email}
-                    {isSelf && <span className="ml-2 text-xs text-gray-500">(você)</span>}
-                    {!target.authorized && <span className="ml-2 text-xs text-red-600">(bloqueado)</span>}
-                  </span>
-                  <span className={`text-xs ${target.hasGroqKey ? 'text-green-700' : 'text-gray-500'}`}>
-                    {target.hasGroqKey ? 'Groq configurado' : 'Sem chave Groq'}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label={`Chave do Groq de ${target.email}`}
-                    onClick={() => setGroqTarget(target)}
-                  >
-                    <KeyRound className="w-4 h-4" />
-                  </Button>
-                  <Select
-                    value={target.role}
-                    disabled={isSelf}
-                    onValueChange={(value) => void changeRole(target, value as UserRole)}
-                  >
-                    <SelectTrigger className="w-44" aria-label={`Role de ${target.email}`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="user">{ROLE_LABELS.user}</SelectItem>
-                      <SelectItem value="admin">{ROLE_LABELS.admin}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    disabled={isSelf}
-                    aria-label={`Remover ${target.email}`}
-                    onClick={() => setPendingDelete(target.email)}
-                  >
-                    <Trash2 className="w-4 h-4 text-red-600" />
-                  </Button>
-                </li>
-              );
-            })}
+          <ul aria-label="Usuários" className="divide-y divide-gray-100">
+            {sortedUsers.map((target) => (
+              <UserRow
+                key={target.email}
+                target={target}
+                isSelf={target.email === userEmail}
+                onEditGroqKey={setGroqTarget}
+                onChangeRole={(row, newRole) => void changeRole(row, newRole)}
+                onToggleAuthorized={(row) => void toggleAuthorized(row)}
+                onDelete={setPendingDelete}
+              />
+            ))}
           </ul>
         )}
       </section>
@@ -216,7 +210,7 @@ export function AdminUsersTab() {
 
       <ConfirmationModal
         isOpen={pendingDelete !== null}
-        text={`Remover ${pendingDelete ?? ''}? Essa pessoa não conseguirá mais entrar no app.`}
+        text={`Remover ${pendingDelete ?? ''}? O cadastro e os contadores de uso serão apagados, e a pessoa volta a entrar no próximo login. Para impedir o acesso, use Bloquear.`}
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => void confirmDelete()}
       />

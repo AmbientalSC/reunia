@@ -126,6 +126,19 @@ async fn exchange_code_for_microsoft_id_token(
     Ok(parsed.id_token)
 }
 
+/// Maps a failed `exchangeMicrosoftToken` response (functions/src/index.ts) to the message shown
+/// on the login screen. Only the two rejections the user can act on get a specific message;
+/// anything else (e.g. a 500 while provisioning) is a server problem, not an account problem.
+fn exchange_error_message(status: reqwest::StatusCode, body: &str) -> &'static str {
+    if status == reqwest::StatusCode::FORBIDDEN && body.contains("access_denied") {
+        "Seu acesso não está liberado. Contate o administrador."
+    } else if status == reqwest::StatusCode::FORBIDDEN && body.contains("domain_not_allowed") {
+        "Use uma conta corporativa @ambiental.sc para entrar."
+    } else {
+        "Não foi possível validar seu login. Tente novamente em instantes."
+    }
+}
+
 async fn exchange_id_token_for_custom_token(id_token: &str) -> Result<MicrosoftAuthResult, String> {
     let client = reqwest::Client::new();
     let response = client
@@ -143,10 +156,7 @@ async fn exchange_id_token_for_custom_token(id_token: &str) -> Result<MicrosoftA
 
     if !status.is_success() {
         log::error!("Custom token exchange failed ({}): {}", status, body);
-        return Err(
-            "Não foi possível validar seu login. Verifique se seu usuário está autorizado."
-                .to_string(),
-        );
+        return Err(exchange_error_message(status, &body).to_string());
     }
 
     let parsed: ExchangeFunctionResponse = serde_json::from_str(&body)

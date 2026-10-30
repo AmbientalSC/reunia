@@ -2,17 +2,24 @@ import { onRequest } from 'firebase-functions/v2/https';
 import * as logger from 'firebase-functions/logger';
 import { initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
+import { defineSecret } from 'firebase-functions/params';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { normalizeAllowedEmail } from './adminUsers';
+import { ensureUserProfile, pickDefaultGroqKey, type ProvisionResult } from './provisioning';
 
 initializeApp();
 
-export { listUsers, upsertUser, setUserGroqKey, deleteUser } from './adminUsers';
+export { listUsers, upsertUser, setUserRole, setUserGroqKey, setUserAuthorized, deleteUser } from './adminUsers';
+export { recordUsage } from './usage';
 
 // Same single-tenant Azure AD app as frontend/src-tauri/src/auth/microsoft.rs.
 // Not secrets — public client identifiers, same reasoning as documented there.
 const AZURE_TENANT_ID = '9afa5a5d-1b9d-46f1-9e93-5689a998a4b2';
 const AZURE_CLIENT_ID = 'e844cfc3-97dd-4bb4-b3b4-b1f7bff575d3';
-const ALLOWED_EMAIL_DOMAIN = '@ambiental.sc';
+
+// Shared Groq key copied into the profile of every auto-provisioned user.
+// Set with: firebase functions:secrets:set GROQ_DEFAULT_API_KEY --project reunia-5974f
+const groqDefaultApiKey = defineSecret('GROQ_DEFAULT_API_KEY');
 
 const issuer = `https://login.microsoftonline.com/${AZURE_TENANT_ID}/v2.0`;
 const jwks = createRemoteJWKSet(
@@ -34,9 +41,13 @@ interface MicrosoftIdTokenClaims {
  * Microsoft id_token ourselves (signature via the tenant's own JWKS, issuer,
  * audience, expiry) and exchange it for a Firebase custom token instead of
  * calling signInWithCredential from the client.
+ *
+ * It is also where access is granted: anyone from the Ambiental tenant with an
+ * @ambiental.sc e-mail gets a `user_profiles` doc created on first login. An
+ * existing profile is never modified, so `authorized: false` still blocks.
  */
 export const exchangeMicrosoftToken = onRequest(
-  { cors: false, region: 'us-central1' },
+  { cors: false, region: 'us-central1', secrets: [groqDefaultApiKey] },
   async (req, res) => {
     if (req.method !== 'POST') {
       res.status(405).json({ error: 'method_not_allowed' });
@@ -62,15 +73,43 @@ export const exchangeMicrosoftToken = onRequest(
       return;
     }
 
-    const email = claims.email ?? claims.preferred_username;
-    if (!claims.oid || !email) {
+    const rawEmail = claims.email ?? claims.preferred_username;
+    if (!claims.oid || !rawEmail) {
       res.status(400).json({ error: 'missing_claims' });
       return;
     }
-    if (!email.toLowerCase().endsWith(ALLOWED_EMAIL_DOMAIN)) {
-      logger.warn('Rejected login outside allowed domain', { email });
+    // Same strict, ASCII-first normalization the admin callables use, so a login
+    // can only ever create a profile that the admin screen could also have created.
+    const email = normalizeAllowedEmail(rawEmail);
+    if (email === null) {
+      logger.warn('Rejected login outside allowed domain', { email: rawEmail });
       res.status(403).json({ error: 'domain_not_allowed' });
       return;
+    }
+
+    const rawDefaultKey = groqDefaultApiKey.value();
+    const defaultGroqKey = pickDefaultGroqKey(rawDefaultKey);
+    if (rawDefaultKey?.trim() && !defaultGroqKey) {
+      logger.warn('GROQ_DEFAULT_API_KEY is malformed; provisioning profiles without a Groq key');
+    }
+
+    let provisioned: ProvisionResult;
+    try {
+      provisioned = await ensureUserProfile(email, defaultGroqKey);
+    } catch (error) {
+      // Fail closed: without a profile the client gate would reject the login anyway.
+      logger.error('Failed to provision user profile', { email, error: String(error) });
+      res.status(500).json({ error: 'profile_provision_failed' });
+      return;
+    }
+    if (provisioned === 'blocked') {
+      logger.warn('Rejected login of a blocked user', { email });
+      res.status(403).json({ error: 'access_denied' });
+      return;
+    }
+    if (provisioned === 'created') {
+      // The key value is never logged.
+      logger.info('Auto-provisioned user profile', { email, withGroqKey: defaultGroqKey !== undefined });
     }
 
     // Prefixed to keep the namespace distinct if another IdP is added later;

@@ -5,6 +5,7 @@ import { CurrentMeeting, useSidebar } from '@/components/Sidebar/SidebarProvider
 import { invoke as invokeTauri } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
 import Analytics from '@/lib/analytics';
+import { reportUsage } from '@/lib/usageTracking';
 import { isOllamaNotInstalledError } from '@/lib/utils';
 import { BuiltInModelInfo } from '@/lib/builtin-ai';
 import {
@@ -278,6 +279,8 @@ export function useSummaryGeneration({
             console.log('Received markdown format from backend');
             setAiSummary({ markdown: pollingResult.data.markdown } as any);
             setSummaryStatus('completed');
+            // Before any awaited follow-up below, so a failing refresh can't lose the count.
+            void reportUsage('summary');
 
             // Show success toast
             toast.success('Resumo gerado com sucesso!', {
@@ -359,6 +362,7 @@ export function useSummaryGeneration({
             duration: 4000,
           });
 
+          void reportUsage('summary');
           await Analytics.trackSummaryGenerationCompleted(
             modelConfig.provider,
             modelConfig.model,

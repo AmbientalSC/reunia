@@ -2,11 +2,13 @@
  * Storage Service
  *
  * Handles all meeting storage and retrieval Tauri backend calls (SQLite persistence).
- * Pure 1-to-1 wrapper - no error handling changes, exact same behavior as direct invoke calls.
+ * 1-to-1 wrapper over the invoke calls, except that a saved meeting is also reported for
+ * the admin usage counters (fire-and-forget, never affects the result).
  */
 
 import { invoke } from '@tauri-apps/api/core';
 import { Transcript } from '@/types';
+import { computeAudioSeconds, reportUsage } from '@/lib/usageTracking';
 
 export interface SaveMeetingRequest {
   meetingTitle: string;
@@ -41,11 +43,14 @@ export class StorageService {
     transcripts: Transcript[],
     folderPath: string | null
   ): Promise<SaveMeetingResponse> {
-    return invoke<SaveMeetingResponse>('api_save_transcript', {
+    const response = await invoke<SaveMeetingResponse>('api_save_transcript', {
       meetingTitle,
       transcripts,
       folderPath,
     });
+    // Single chokepoint for recordings and transcript recovery; imports report on their own.
+    void reportUsage('meeting', computeAudioSeconds(transcripts));
+    return response;
   }
 
   /**

@@ -11,10 +11,12 @@ import {
 import { auth } from '@/config/firebase';
 import { fetchUserProfile } from '@/lib/userProfile';
 import { autoConfigureEnterpriseProviders } from '@/lib/enterpriseSetup';
+import { claimAccessReport, releaseAccessReport, reportUsage } from '@/lib/usageTracking';
 
 const ALLOWED_EMAIL_DOMAIN = '@ambiental.sc';
-const NOT_REGISTERED_MESSAGE =
-  'Seu usuário ainda não foi cadastrado. Contate o administrador para liberar o acesso.';
+// Anyone with an @ambiental.sc e-mail gets a profile on first login (see
+// functions/src/index.ts), so this only reaches users an admin blocked or removed.
+const ACCESS_DENIED_MESSAGE = 'Seu acesso não está liberado. Contate o administrador.';
 
 interface MicrosoftAuthResult {
   custom_token: string;
@@ -23,6 +25,9 @@ interface MicrosoftAuthResult {
 
 interface AuthContextType {
   user: User | null;
+  /** Lowercased e-mail from the ID token claims. `user.email` is null for custom-token
+   * sessions, so anything that needs "who am I" (e.g. the admin list) must use this. */
+  userEmail: string | null;
   isLoading: boolean;
   isSigningIn: boolean;
   isAuthenticated: boolean;
@@ -43,6 +48,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -55,7 +61,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
       if (!firebaseUser) {
+        releaseAccessReport();
         setUser(null);
+        setUserEmail(null);
         setHasManagedGroqKey(false);
         setIsAdmin(false);
         try {
@@ -86,14 +94,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // Login with Microsoft only proves the user belongs to the Ambiental
-        // tenant — it does NOT mean they're allowed to use the app. Access
-        // (and the per-user Groq key) requires a profile pre-registered by
-        // an admin in Firestore, keyed by email (see userProfile.ts).
+        // The profile (access flag, role and per-user Groq key) is created by
+        // exchangeMicrosoftToken on first login and keyed by email (see
+        // userProfile.ts). A missing or unauthorized one means an admin
+        // blocked or removed this user — the gate stays as the safety net.
         const profile = await fetchUserProfile(email);
         if (!profile || !profile.authorized) {
           console.error('[AuthContext] No authorized profile for uid', firebaseUser.uid);
-          setAuthError(NOT_REGISTERED_MESSAGE);
+          setAuthError(ACCESS_DENIED_MESSAGE);
           await firebaseSignOut(auth);
           // onIdTokenChanged fires again with null and clears the native
           // session; nothing else to do here.
@@ -127,13 +135,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         setUser(firebaseUser);
+        setUserEmail(email);
         setHasManagedGroqKey(!!profile.groqApiKey?.trim());
         setIsAdmin(profile.role === 'admin');
         setAuthError(null);
+
+        // Counts app opens: token refreshes and webview reloads reuse the same claim.
+        if (claimAccessReport(firebaseUser.uid)) {
+          void reportUsage('access');
+        }
       } catch (error) {
         console.error('[AuthContext] Failed to mirror auth session natively:', error);
         setAuthError('Falha ao iniciar a sessão. Tente novamente.');
         setUser(null);
+        setUserEmail(null);
         setHasManagedGroqKey(false);
         setIsAdmin(false);
       } finally {
@@ -177,6 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        userEmail,
         isLoading,
         isSigningIn,
         isAuthenticated: !!user,

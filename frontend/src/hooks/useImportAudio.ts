@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import Analytics from '@/lib/analytics';
+import { reportUsage } from '@/lib/usageTracking';
 import { applyPinnedSummaryLanguageToMeeting } from '@/lib/summary-language-preferences';
 import { toast } from 'sonner';
 
@@ -102,6 +103,8 @@ export function useImportAudio({
         async (event) => {
           if (isCancelledRef.current) return;
 
+          // Imported meetings bypass StorageService.saveMeeting (the backend writes them).
+          void reportUsage('meeting', event.payload.duration_seconds);
           await Analytics.track('import_audio_completed', {
             success: 'true',
             duration_seconds: event.payload.duration_seconds.toString(),
